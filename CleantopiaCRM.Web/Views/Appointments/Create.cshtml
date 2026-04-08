@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Entities.Appointment
+@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; }
+<h4>Them lich hen</h4>
+<form method="post" class="row g-2"><div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div><div class="col-md-6"><input type="datetime-local" class="form-control" name="ScheduledAt" value="@Model.ScheduledAt.ToString("yyyy-MM-ddTHH:mm")" /></div><div class="col-md-4"><input class="form-control" name="Type" value="Khao sat" /></div><div class="col-md-4"><input class="form-control" name="Status" value="Planned" /></div><div class="col-md-12"><textarea class="form-control" name="Notes" placeholder="Ghi chu"></textarea></div><div class="col-12"><button class="btn btn-brand">Luu</button></div></form>

@@ -1,0 +1,7 @@
+@{
+    var total = (decimal)ViewBag.TotalRevenue;
+    var byDay = (IEnumerable<Tuple<DateTime, decimal>>)ViewBag.ByDay;
+}
+<h4>Bao cao doanh thu</h4>
+<div class="alert alert-info">Tong doanh thu tu bao gia da duyet: <b>@total.ToString("N0") VND</b></div>
+<table class="table table-striped"><tr><th>Ngay</th><th>Doanh thu</th></tr>@foreach (var x in byDay){<tr><td>@x.Item1.ToString("dd/MM/yyyy")</td><td>@x.Item2.ToString("N0")</td></tr>}</table>

@@ -1,0 +1,13 @@
+﻿@model CleantopiaCRM.Web.Entities.Quote
+@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; var services = (IEnumerable<CleantopiaCRM.Web.Entities.ServicePrice>)ViewBag.Services; }
+<h4>Tao bao gia</h4>
+<form method="post" class="row g-2">
+<div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div>
+<div class="col-md-3"><input type="date" class="form-control" name="QuoteDate" value="@Model.QuoteDate.ToString("yyyy-MM-dd")" /></div>
+<div class="col-md-3"><input type="date" class="form-control" name="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" /></div>
+<div class="col-md-8"><select class="form-select" name="servicePriceId">@foreach(var s in services){<option value="@s.Id">@s.Category - @s.ServiceName @((string.IsNullOrWhiteSpace(s.VariantName)?"":$"({s.VariantName})")) - @s.Price.ToString("N0")</option>}</select></div>
+<div class="col-md-4"><input class="form-control" type="number" step="0.1" name="quantity" value="1" /></div>
+<div class="col-12"><textarea class="form-control" name="Notes" placeholder="Ghi chu"></textarea></div>
+<div class="col-12"><button class="btn btn-brand">Luu bao gia</button></div>
+</form>
+

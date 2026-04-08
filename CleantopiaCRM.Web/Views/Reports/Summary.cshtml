@@ -1,0 +1,17 @@
+﻿@{
+    var byMonth = (IEnumerable<dynamic>)ViewBag.ByMonth;
+    var byEmployee = (IEnumerable<Tuple<string,int>>)ViewBag.ByEmployee;
+    var byService = (IEnumerable<Tuple<string,decimal,decimal>>)ViewBag.ByService;
+}
+<h4>Báo cáo tổng hợp nâng cao</h4>
+<form class="row g-2 mb-3"><div class="col-md-3"><input type="date" class="form-control" name="fromDate" value="@(((DateTime)ViewBag.FromDate).ToString("yyyy-MM-dd"))" /></div><div class="col-md-3"><input type="date" class="form-control" name="toDate" value="@(((DateTime)ViewBag.ToDate).ToString("yyyy-MM-dd"))" /></div><div class="col-md-2"><button class="btn btn-outline-primary">Xem</button></div></form>
+<div class="alert alert-info">Tổng doanh thu: <b>@(((decimal)ViewBag.TotalRevenue).ToString("N0")) VND</b></div>
+
+<h5>Theo tháng</h5>
+<table class="table table-sm"><tr><th>Tháng</th><th>Doanh thu</th></tr>@foreach(var x in byMonth){<tr><td>@x.Month</td><td>@x.Revenue.ToString("N0")</td></tr>}</table>
+
+<h5>Theo nhân viên (số lượt phân công)</h5>
+<table class="table table-sm"><tr><th>Nhân viên</th><th>Số lượt</th></tr>@foreach(var x in byEmployee){<tr><td>@x.Item1</td><td>@x.Item2</td></tr>}</table>
+
+<h5>Theo dịch vụ</h5>
+<table class="table table-sm"><tr><th>Dịch vụ</th><th>Số lượng</th><th>Doanh thu</th></tr>@foreach(var x in byService){<tr><td>@x.Item1</td><td>@x.Item2.ToString("N2")</td><td>@x.Item3.ToString("N0")</td></tr>}</table>

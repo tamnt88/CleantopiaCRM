@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Assignment>
+<h4>Phân công nhân s? <a href="/Assignments/Create" class="btn btn-sm btn-brand">Phân công m?i</a></h4>
+<form class="row g-2 mb-3"><div class="col-md-4"><input name="q" value="@Model.Query" class="form-control" placeholder="Tên NV / khách hàng" /></div><div class="col-md-2"><button class="btn btn-outline-primary">Tìm</button></div></form>
+<table class="table"><tr><th>L?ch h?n</th><th>Nhân viên</th><th>Vai trò</th><th></th></tr>@foreach(var x in Model.Items){<tr><td>@x.Appointment?.Customer?.Name - @x.Appointment?.ScheduledAt.ToString("dd/MM HH:mm")</td><td>@x.Employee?.FullName</td><td>@x.Role</td><td><a href="/Assignments/Edit/@x.Id" class="btn btn-sm btn-outline-primary">S?a</a> <form method="post" action="/Assignments/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger">Xóa</button></form></td></tr>}</table>

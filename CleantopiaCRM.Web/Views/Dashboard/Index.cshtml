@@ -1,0 +1,8 @@
+@model CleantopiaCRM.Web.ViewModels.DashboardVm
+@{ ViewData["Title"] = "Dashboard"; }
+<div class="row g-3">
+    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Khach hang</div><h3>@Model.CustomerCount</h3></div></div></div>
+    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Lich hen hom nay</div><h3>@Model.AppointmentToday</h3></div></div></div>
+    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Doanh thu</div><h3>@Model.Revenue.ToString("N0")</h3></div></div></div>
+    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Nhac lich sap toi</div><h3>@Model.PendingReminders</h3></div></div></div>
+</div>

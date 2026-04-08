@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Entities.ServiceFeedback
+@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; }
+<h4>Them feedback</h4>
+<form method="post" class="row g-2"><div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div><div class="col-md-6"><input type="number" min="1" max="5" class="form-control" name="Rating" value="5" /></div><div class="col-12"><textarea class="form-control" name="Content" placeholder="Noi dung feedback"></textarea></div><div class="col-12"><button class="btn btn-brand">Luu</button></div></form>

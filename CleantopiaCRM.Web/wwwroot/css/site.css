@@ -1,0 +1,141 @@
+﻿:root {
+  --brand-primary: #1d42e1;
+  --brand-secondary: #4190a2;
+  --brand-accent: #38b5db;
+}
+
+html, body {
+  font-family: Roboto, sans-serif;
+}
+
+.bg-brand {
+  background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+}
+
+.btn-brand {
+  background: var(--brand-primary);
+  color: #fff;
+  border: 0;
+}
+
+.btn-brand:hover {
+  background: #1736b8;
+  color: #fff;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  margin-right: 8px;
+}
+
+.card-kpi {
+  border: 0;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, .08);
+}
+
+.login-page {
+  min-height: 100vh;
+  margin: 0;
+  background: url('/images/bg.jpg') center center / cover no-repeat fixed;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-overlay {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(1px);
+  background: linear-gradient(180deg, rgba(7, 14, 27, .35), rgba(8, 13, 25, .55));
+}
+
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.login-glass {
+  width: 100%;
+  max-width: 520px;
+  padding: 32px 34px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, .28);
+  background: rgba(10, 24, 48, .5);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, .38);
+}
+
+.login-logo {
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.login-title {
+  margin: 0;
+  color: #fff;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+.login-field {
+  margin-bottom: 22px;
+}
+
+.login-input {
+  border: 0;
+  border-bottom: 2px solid rgba(255, 255, 255, .75);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  padding: 12px 4px;
+  font-size: 30px;
+}
+
+.login-input::placeholder {
+  color: rgba(255, 255, 255, .75);
+}
+
+.login-input:focus {
+  background: transparent;
+  color: #fff;
+  border-color: #fff;
+  box-shadow: none;
+}
+
+.login-btn {
+  border: 0;
+  border-radius: 8px;
+  background: #f2f4f8;
+  color: #111;
+  font-size: 30px;
+  font-weight: 600;
+  padding: 12px;
+}
+
+.login-btn:hover {
+  background: #fff;
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .login-glass {
+    padding: 24px 18px;
+  }
+
+  .login-title {
+    font-size: 34px;
+  }
+
+  .login-input,
+  .login-btn {
+    font-size: 22px;
+  }
+}

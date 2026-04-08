@@ -1,0 +1,6 @@
+﻿-- Run order:
+-- 1) 01_schema.sql
+-- 2) 02_seed.sql
+-- 3) 03_seed_countries_vi.sql (full quốc gia tiếng Việt)
+-- 4) Start app and go to /AddressAdmin/SyncGhn to pull latest GHN provinces/wards
+-- GHN source based on document: "GHN - Cập nhật API - Đáp ứng đơn vị hành chính mới.docx"

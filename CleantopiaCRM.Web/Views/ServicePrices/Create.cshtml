@@ -1,0 +1,13 @@
+@model CleantopiaCRM.Web.Entities.ServicePrice
+<h4>D?ch v?</h4>
+<form method="post" class="row g-2">
+<div class="col-md-3"><input asp-for="Category" class="form-control" placeholder="Nhóm (Máy l?nh...)" /></div>
+<div class="col-md-4"><input asp-for="ServiceName" class="form-control" placeholder="Tên d?ch v?" /></div>
+<div class="col-md-2"><input asp-for="VariantName" class="form-control" placeholder="Bi?n th?" /></div>
+<div class="col-md-1"><input asp-for="Unit" class="form-control" placeholder="Ðon v?" /></div>
+<div class="col-md-2"><input asp-for="Price" class="form-control" placeholder="Giá" /></div>
+<div class="col-md-2"><input asp-for="DisplayOrder" class="form-control" placeholder="STT" /></div>
+<div class="col-md-10"><textarea asp-for="Description" class="form-control" placeholder="Mô t?"></textarea></div>
+<div class="col-md-2"><select asp-for="IsActive" class="form-select"><option value="true">Hi?n</option><option value="false">?n</option></select></div>
+<div class="col-12"><button class="btn btn-brand">Luu</button></div>
+</form>

@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Entities.Assignment
+@{ var appointments = (IEnumerable<CleantopiaCRM.Web.Entities.Appointment>)ViewBag.Appointments; var employees = (IEnumerable<CleantopiaCRM.Web.Entities.Employee>)ViewBag.Employees; }
+<h4>Phân công</h4>
+<form method="post" class="row g-2"><div class="col-md-6"><select class="form-select" name="AppointmentId">@foreach(var a in appointments){<option value="@a.Id">@a.Customer?.Name - @a.ScheduledAt.ToString("dd/MM/yyyy HH:mm")</option>}</select></div><div class="col-md-6"><select class="form-select" name="EmployeeId">@foreach(var e in employees){<option value="@e.Id">@e.FullName (@e.Role)</option>}</select></div><div class="col-md-6"><input class="form-control" name="Role" value="Thuc hien" /></div><div class="col-md-6"><input class="form-control" name="SupervisionNote" placeholder="Ghi chú giám sát" /></div><div class="col-12"><button class="btn btn-brand">Luu</button></div></form>

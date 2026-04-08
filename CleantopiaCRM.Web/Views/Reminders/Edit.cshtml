@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Entities.MaintenanceReminder
+@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; }
+<h4>Them lich nhac bao tri</h4>
+<form method="post" class="row g-2"><div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div><div class="col-md-6"><input class="form-control" name="ServiceName" placeholder="Dich vu (vd: ve sinh may lanh)" /></div><div class="col-md-4"><input type="date" class="form-control" name="LastServiceDate" value="@Model.LastServiceDate.ToString("yyyy-MM-dd")" /></div><div class="col-md-4"><input type="number" class="form-control" name="CycleDays" value="@Model.CycleDays" /></div><div class="col-md-4"><input type="date" class="form-control" name="NextReminderDate" value="@Model.NextReminderDate.ToString("yyyy-MM-dd")" /></div><div class="col-12"><button class="btn btn-brand">Luu</button></div></form>

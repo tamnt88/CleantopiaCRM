@@ -1,0 +1,53 @@
+﻿@using System.Security.Claims
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Clean Topia CRM</title>
+    <link rel="icon" type="image/jpeg" href="~/images/fav.jpg" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-brand px-3">
+        <a class="navbar-brand d-flex align-items-center" href="/Dashboard/Index"><img src="~/images/logo.png" class="logo" alt="logo" /> Clean Topia CRM</a>
+        <div class="navbar-nav">
+            <a class="nav-link" href="/Customers">Khách hàng</a>
+            <a class="nav-link" href="/Employees">Nhân viên</a>
+            <a class="nav-link" href="/ServicePrices">Bảng giá</a>
+            <a class="nav-link" href="/Quotes">Báo giá</a>
+            <a class="nav-link" href="/Appointments">Lịch hẹn</a>
+            <a class="nav-link" href="/Assignments">Phân công</a>
+            <a class="nav-link" href="/Feedbacks">Feedback</a>
+            <a class="nav-link" href="/Reminders">Nhắc bảo trì</a>
+            <a class="nav-link" href="/Reports/Revenue">Doanh thu</a>
+            <a class="nav-link" href="/Reports/Summary">Tổng hợp</a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="nav-link" href="/Users">Người dùng</a>
+            }
+        </div>
+        <div class="ms-auto text-white small d-flex align-items-center gap-2">
+            @if (User.IsInRole("Admin") || User.IsInRole("DieuPhoi"))
+            {
+                <form method="post" action="/AddressAdmin/SyncGhn">
+                    <button class="btn btn-sm btn-warning">Sync GHN</button>
+                </form>
+            }
+            <span>@User.FindFirstValue(ClaimTypes.GivenName) (@User.FindFirstValue(ClaimTypes.Role))</span>
+            <a class="btn btn-sm btn-light" href="/Account/Logout">Đăng xuất</a>
+        </div>
+    </nav>
+    <div class="container py-4">
+        @if (TempData["Message"] is string msg)
+        {
+            <div class="alert alert-success">@msg</div>
+        }
+        @RenderBody()
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

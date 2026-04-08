@@ -1,0 +1,4 @@
+@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.ServiceFeedback>
+<h4>Feedback d?ch v? <a href="/Feedbacks/Create" class="btn btn-sm btn-brand">Thêm feedback</a></h4>
+<form class="row g-2 mb-3"><div class="col-md-4"><input name="q" value="@Model.Query" class="form-control" placeholder="Khách hàng / n?i dung" /></div><div class="col-md-2"><button class="btn btn-outline-primary">Tìm</button></div></form>
+<table class="table"><tr><th>Khách hàng</th><th>Ði?m</th><th>N?i dung</th><th></th></tr>@foreach(var x in Model.Items){<tr><td>@x.Customer?.Name</td><td>@x.Rating/5</td><td>@x.Content</td><td><a href="/Feedbacks/Edit/@x.Id" class="btn btn-sm btn-outline-primary">S?a</a> <form method="post" action="/Feedbacks/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger">Xóa</button></form></td></tr>}</table>

@@ -1,0 +1,6 @@
+@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Employee>
+<h4>Nhân viên <a href="/Employees/Create" class="btn btn-sm btn-brand">Thêm</a></h4>
+<form class="row g-2 mb-3"><div class="col-md-4"><input name="q" value="@Model.Query" class="form-control" placeholder="Tìm theo tên/mã" /></div><div class="col-md-2"><button class="btn btn-outline-primary">Tìm</button></div></form>
+<table class="table table-striped"><tr><th>Mã</th><th>Tên</th><th>Vai trò</th><th>SÐT</th><th>Ð?a ch?</th><th></th></tr>
+@foreach (var x in Model.Items){<tr><td>@x.EmployeeCode</td><td>@x.FullName</td><td>@x.Role</td><td>@x.Phone</td><td>@x.Address?.FullText</td><td><a href="/Employees/Edit/@x.Id" class="btn btn-sm btn-outline-primary">S?a</a> <form method="post" action="/Employees/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger">Xóa</button></form></td></tr>}
+</table>
