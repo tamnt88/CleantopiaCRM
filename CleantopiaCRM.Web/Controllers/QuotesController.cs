@@ -89,7 +89,40 @@ public class QuotesController(AppDbContext db, IWebHostEnvironment env) : Contro
     {
         var quote = await db.Quotes.FindAsync(id);
         if (quote is null) return NotFound();
+        var wasApproved = string.Equals(quote.Status, "Approved", StringComparison.OrdinalIgnoreCase);
         quote.Status = "Approved";
+
+        if (!wasApproved)
+        {
+            var items = await db.QuoteItems
+                .Include(x => x.ServicePrice)
+                    .ThenInclude(x => x!.Policy)
+                .Where(x => x.QuoteId == id)
+                .ToListAsync();
+
+            foreach (var item in items)
+            {
+                if (item.ServicePrice is null) continue;
+
+                var cycleDays = item.ServicePrice.Policy?.RecareCycleDays ?? 180;
+                if (cycleDays <= 0) cycleDays = 180;
+
+                var serviceName = item.ServicePrice.ServiceName;
+                if (!string.IsNullOrWhiteSpace(item.ServicePrice.VariantName))
+                    serviceName += $" ({item.ServicePrice.VariantName})";
+
+                db.MaintenanceReminders.Add(new MaintenanceReminder
+                {
+                    CustomerId = quote.CustomerId,
+                    ServiceName = serviceName,
+                    CycleDays = cycleDays,
+                    LastServiceDate = quote.QuoteDate.Date,
+                    NextReminderDate = quote.QuoteDate.Date.AddDays(cycleDays),
+                    IsDone = false
+                });
+            }
+        }
+
         await db.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }

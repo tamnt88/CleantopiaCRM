@@ -1,48 +1,251 @@
 ﻿@model CleantopiaCRM.Web.Entities.Customer
 @{
     ViewData["Title"] = "Thêm khách hàng";
+    ViewData["BreadcrumbParent"] = "Khách hàng";
+    ViewData["BreadcrumbParentUrl"] = "/Customers";
     var countries = (IEnumerable<CleantopiaCRM.Web.Entities.Country>)ViewBag.Countries;
     var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
     var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
     var sources = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerSource>)ViewBag.Sources;
     var types = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerType>)ViewBag.Types;
+    var selectedProvinceId = (int?)ViewBag.ProvinceId;
+    var selectedWardId = (int?)ViewBag.WardId;
+    var isModal = (bool?)ViewBag.IsModal == true;
 }
+<link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
+<style>
+    .customer-create-form {
+        max-width: 1320px;
+    }
+
+    .customer-modal-mode .customer-create-form {
+        max-width: 100%;
+    }
+
+    .customer-modal-mode h4 {
+        margin-bottom: 12px;
+        font-size: 1.9rem;
+    }
+
+    .customer-modal-mode .card.card-body {
+        padding: .9rem;
+        margin-bottom: .8rem !important;
+    }
+
+    .form-section {
+        margin-bottom: 12px;
+    }
+
+    .form-section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 8px;
+        font-size: 1.03rem;
+        font-weight: 700;
+        color: #0f2d58;
+    }
+
+    .form-section-title i {
+        color: #1d42e1;
+        font-size: .95rem;
+    }
+
+    .form-actions {
+        margin-top: 6px;
+    }
+
+    .customer-create-form .select2-container .select2-selection--single {
+        height: calc(1.5em + .75rem + 2px);
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        padding: .375rem .75rem;
+    }
+
+    .customer-create-form .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #495057;
+        line-height: 1.5;
+        padding-left: 0;
+        padding-right: 1.25rem;
+    }
+
+    .customer-create-form .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: calc(1.5em + .75rem);
+        right: .5rem;
+    }
+
+    .select2-container--default .select2-selection--single.is-invalid {
+        border-color: #dc3545;
+    }
+</style>
+<div class="@(isModal ? "customer-modal-mode" : "")">
+@if (!isModal)
+{
 <h4>Thêm khách hàng</h4>
-<form method="post" class="row g-2">
-    <div class="col-md-4"><input asp-for="Name" class="form-control" placeholder="Tên khách hàng" /></div>
-    <div class="col-md-2"><input asp-for="Phone" class="form-control" placeholder="SĐT" /></div>
-    <div class="col-md-3"><input asp-for="Email" class="form-control" placeholder="Email" /></div>
-    <div class="col-md-3"><select asp-for="CountryId" class="form-select">@foreach(var c in countries){<option value="@c.Id">@c.Name</option>}</select></div>
+}
+<form method="post" class="customer-create-form">
+    @if (isModal)
+    {
+        <input type="hidden" name="modal" value="1" />
+    }
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
 
-    <div class="col-md-4"><select asp-for="CustomerSourceId" class="form-select"><option value="">-- Nguồn khách --</option>@foreach(var s in sources){<option value="@s.Id">@s.Name</option>}</select></div>
-    <div class="col-md-4"><select asp-for="CustomerTypeId" id="customerTypeId" class="form-select"><option value="">-- Loại khách --</option>@foreach(var t in types){<option value="@t.Id" data-business="@(t.IsBusiness.ToString().ToLower())">@t.Name</option>}</select></div>
-    <div class="col-md-4 form-check d-flex align-items-center px-4"><input asp-for="IsBusiness" class="form-check-input" id="isBusiness" /><label class="form-check-label ms-2" for="isBusiness">Khách doanh nghiệp</label></div>
+    <div class="form-section">
+        <div class="form-section-title"><i class="fa-solid fa-user"></i> Thông tin khách hàng</div>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label asp-for="Name" class="form-label mb-1">Tên khách hàng</label>
+                <input asp-for="Name" class="form-control" placeholder="Tên khách hàng" required data-msg-required="Vui lòng nhập tên khách hàng." />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Phone" class="form-label mb-1">Số điện thoại</label>
+                <input asp-for="Phone" class="form-control" placeholder="SĐT" required data-msg-required="Vui lòng nhập số điện thoại." />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Email" class="form-label mb-1">Email</label>
+                <input asp-for="Email" class="form-control" placeholder="Email" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CountryId" class="form-label mb-1">Quốc gia</label>
+                <select asp-for="CountryId" class="form-select js-select2" required data-msg-required="Vui lòng chọn quốc gia.">
+                    @foreach(var c in countries){<option value="@c.Id">@c.Name</option>}
+                </select>
+                <span asp-validation-for="CountryId" class="text-danger"></span>
+            </div>
 
-    <div id="invoiceBlock" class="row g-2 border rounded p-2 m-0 mt-1">
-        <div class="col-12 fw-semibold">Thông tin xuất hóa đơn (khách hàng)</div>
-        <div class="col-md-4"><input asp-for="CompanyName" class="form-control" placeholder="Tên công ty" /></div>
-        <div class="col-md-2"><input asp-for="TaxCode" class="form-control" placeholder="Mã số thuế" /></div>
-        <div class="col-md-6"><input asp-for="BillingAddress" class="form-control" placeholder="Địa chỉ xuất hóa đơn" /></div>
-        <div class="col-md-4"><input asp-for="BillingEmail" class="form-control" placeholder="Email nhận hóa đơn" /></div>
-        <div class="col-md-3"><input asp-for="BillingPhone" class="form-control" placeholder="SĐT hóa đơn" /></div>
-        <div class="col-md-5"><input asp-for="BillingReceiver" class="form-control" placeholder="Người nhận hóa đơn" /></div>
+            <div class="col-md-4">
+                <label asp-for="CustomerSourceId" class="form-label mb-1">Nguồn khách</label>
+                <select asp-for="CustomerSourceId" class="form-select js-select2" required data-msg-required="Vui lòng chọn nguồn khách.">
+                    <option value="">-- Nguồn khách --</option>
+                    @foreach(var s in sources){<option value="@s.Id">@s.Name</option>}
+                </select>
+                <span asp-validation-for="CustomerSourceId" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CustomerTypeId" class="form-label mb-1">Loại khách</label>
+                <select asp-for="CustomerTypeId" id="customerTypeId" class="form-select js-select2" required data-msg-required="Vui lòng chọn loại khách.">
+                    <option value="">-- Loại khách --</option>
+                    @foreach(var t in types){<option value="@t.Id" data-business="@(t.IsBusiness.ToString().ToLower())">@t.Name</option>}
+                </select>
+                <span asp-validation-for="CustomerTypeId" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label mb-1 d-block">&nbsp;</label>
+                <div class="form-check d-flex align-items-center">
+                    <input asp-for="IsBusiness" class="form-check-input" id="isBusiness" />
+                    <label class="form-check-label ms-2" for="isBusiness">Khách doanh nghiệp</label>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label mb-1">Ghi chú</label>
+                <textarea asp-for="Notes" class="form-control" placeholder="Ghi chú"></textarea>
+            </div>
+        </div>
     </div>
 
-    <div class="col-12 fw-semibold mt-3">Địa chỉ dịch vụ mặc định + người liên hệ</div>
-    <div class="col-md-2"><input class="form-control" name="houseNumber" placeholder="Số nhà" /></div>
-    <div class="col-md-3"><input class="form-control" name="street" placeholder="Tên đường" /></div>
-    <div class="col-md-3"><select class="form-select" id="provinceId" name="provinceId">@foreach(var p in provinces){<option value="@p.Id">@p.ProvinceName</option>}</select></div>
-    <div class="col-md-4"><select class="form-select" id="wardId" name="wardId">@foreach(var w in wards){<option value="@w.Id">@w.WardName</option>}</select></div>
-    <div class="col-md-4"><input class="form-control" name="siteName" placeholder="Tên địa điểm (VD: Trụ sở, Chi nhánh 1)" /></div>
-    <div class="col-md-4"><input class="form-control" name="contactName" placeholder="Người liên hệ" /></div>
-    <div class="col-md-2"><input class="form-control" name="contactPhone" placeholder="SĐT liên hệ" /></div>
-    <div class="col-md-2"><input class="form-control" name="contactEmail" placeholder="Email liên hệ" /></div>
+    <div id="invoiceBlock" class="form-section">
+        <div class="form-section-title"><i class="fa-solid fa-file-invoice"></i> Thông tin xuất hóa đơn (khách doanh nghiệp)</div>
+        <div class="row g-2">
+            <div class="col-md-4">
+                <label asp-for="CompanyName" class="form-label mb-1">Tên công ty</label>
+                <input asp-for="CompanyName" class="form-control" placeholder="Tên công ty" />
+                <span asp-validation-for="CompanyName" class="text-danger"></span>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="TaxCode" class="form-label mb-1">Mã số thuế</label>
+                <input asp-for="TaxCode" class="form-control" placeholder="Mã số thuế" />
+                <span asp-validation-for="TaxCode" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="BillingAddress" class="form-label mb-1">Địa chỉ xuất hóa đơn</label>
+                <input asp-for="BillingAddress" class="form-control" placeholder="Địa chỉ xuất hóa đơn" />
+                <span asp-validation-for="BillingAddress" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="BillingEmail" class="form-label mb-1">Email nhận hóa đơn</label>
+                <input asp-for="BillingEmail" class="form-control" placeholder="Email nhận hóa đơn" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="BillingPhone" class="form-label mb-1">SĐT hóa đơn</label>
+                <input asp-for="BillingPhone" class="form-control" placeholder="SĐT hóa đơn" />
+            </div>
+            <div class="col-md-5">
+                <label asp-for="BillingReceiver" class="form-label mb-1">Người nhận hóa đơn</label>
+                <input asp-for="BillingReceiver" class="form-control" placeholder="Người nhận hóa đơn" />
+            </div>
+        </div>
+    </div>
 
-    <div class="col-12"><textarea asp-for="Notes" class="form-control" placeholder="Ghi chú"></textarea></div>
-    <div class="col-12 d-flex gap-2"><button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button><a href="/Customers" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a></div>
+    <div class="form-section">
+        <div class="form-section-title"><i class="fa-solid fa-location-dot"></i> Địa chỉ dịch vụ mặc định và người liên hệ</div>
+        <div class="row g-2">
+            <div class="col-md-2">
+                <label class="form-label mb-1">Số nhà</label>
+                <input class="form-control" name="houseNumber" placeholder="Số nhà" value="@ViewBag.HouseNumber" required data-msg-required="Vui lòng nhập số nhà." />
+                @Html.ValidationMessage("houseNumber", null, new { @class = "text-danger" })
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">Tên đường</label>
+                <input class="form-control" name="street" placeholder="Tên đường" value="@ViewBag.Street" required data-msg-required="Vui lòng nhập tên đường." />
+                @Html.ValidationMessage("street", null, new { @class = "text-danger" })
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1">Tỉnh/Thành</label>
+                <select class="form-select js-select2" id="provinceId" name="provinceId" required data-msg-required="Vui lòng chọn tỉnh/thành.">
+                    @foreach(var p in provinces){<option value="@p.Id" selected="@(selectedProvinceId == p.Id)">@p.ProvinceName</option>}
+                </select>
+                @Html.ValidationMessage("provinceId", null, new { @class = "text-danger" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label mb-1">Phường/Xã</label>
+                <select class="form-select js-select2" id="wardId" name="wardId" required data-msg-required="Vui lòng chọn phường/xã.">
+                    @foreach(var w in wards){<option value="@w.Id" selected="@(selectedWardId == w.Id)">@w.WardName</option>}
+                </select>
+                @Html.ValidationMessage("wardId", null, new { @class = "text-danger" })
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label mb-1">Tên địa điểm</label>
+                <input class="form-control" name="siteName" placeholder="Tên địa điểm (VD: Trụ sở, Chi nhánh 1)" value="@ViewBag.SiteName" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label mb-1">Người liên hệ</label>
+                <input class="form-control" name="contactName" placeholder="Người liên hệ" value="@ViewBag.ContactName" required data-msg-required="Vui lòng nhập người liên hệ." />
+                @Html.ValidationMessage("contactName", null, new { @class = "text-danger" })
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1">SĐT liên hệ</label>
+                <input class="form-control" name="contactPhone" placeholder="SĐT liên hệ" value="@ViewBag.ContactPhone" required data-msg-required="Vui lòng nhập số điện thoại liên hệ." />
+                @Html.ValidationMessage("contactPhone", null, new { @class = "text-danger" })
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1">Email liên hệ</label>
+                <input class="form-control" name="contactEmail" placeholder="Email liên hệ" value="@ViewBag.ContactEmail" />
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 form-actions">
+        <button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button>
+        @if (isModal)
+        {
+            <button type="button" class="btn btn-outline-secondary" onclick="window.parent && window.parent.CRM && window.parent.CRM.closeCustomerModal(false);"><i class="fa-solid fa-xmark"></i> Đóng</button>
+        }
+        else
+        {
+            <a href="/Customers" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
+        }
+    </div>
 </form>
+</div>
 
 @section Scripts {
+<script src="~/lib/select2/dist/js/select2.min.js"></script>
+<partial name="_ValidationScriptsPartial" />
+<script src="~/lib/jquery-validation/dist/localization/messages_vi.min.js"></script>
 <script>
 (function(){
   const province = document.getElementById('provinceId');
@@ -55,6 +258,7 @@
     const res = await fetch(`/api/address/wards?provinceId=${province.value}`);
     const data = await res.json();
     ward.innerHTML = data.map(x => `<option value="${x.id}">${x.wardName}</option>`).join('');
+    $('#wardId').trigger('change.select2');
   }
 
   function syncBusinessByType(){
@@ -65,13 +269,86 @@
   }
 
   function toggleInvoice(){
-    invoiceBlock.style.display = isBusiness.checked ? 'flex' : 'none';
+    invoiceBlock.style.display = isBusiness.checked ? 'block' : 'none';
+  }
+
+  $('.js-select2').select2({
+    width: '100%'
+  });
+
+  const $form = $('form.customer-create-form');
+  $form.validate({
+    errorClass: 'text-danger',
+    errorElement: 'span',
+    errorPlacement: function(error, element) {
+      if (element.hasClass('js-select2')) {
+        error.insertAfter(element.next('.select2'));
+      } else {
+        error.insertAfter(element);
+      }
+    },
+    highlight: function(element) {
+      const $el = $(element);
+      $el.addClass('is-invalid');
+      if ($el.hasClass('js-select2')) {
+        $el.next('.select2').find('.select2-selection').addClass('is-invalid');
+      }
+    },
+    unhighlight: function(element) {
+      const $el = $(element);
+      $el.removeClass('is-invalid');
+      if ($el.hasClass('js-select2')) {
+        $el.next('.select2').find('.select2-selection').removeClass('is-invalid');
+      }
+    }
+  });
+
+  function setRequiredState(el, isValid){
+    if (el.classList.contains('js-select2')) {
+      const selection = $(el).next('.select2').find('.select2-selection');
+      selection.toggleClass('is-invalid', !isValid);
+      return;
+    }
+
+    el.classList.toggle('is-invalid', !isValid);
+  }
+
+  document.querySelector('form.customer-create-form').addEventListener('submit', function(e){
+    if ($form.valid && !$form.valid()) {
+      e.preventDefault();
+      return;
+    }
+
+    this.querySelectorAll('[required]').forEach(function(el){
+      const isValid = !!(el.value && el.value.toString().trim());
+      setRequiredState(el, isValid);
+    });
+  });
+
+  document.querySelectorAll('[required]').forEach(function(el){
+    el.addEventListener('input', function(){ setRequiredState(el, true); });
+    el.addEventListener('change', function(){ setRequiredState(el, true); });
+  });
+
+  function notifyModalResize(){
+    if (window.parent && window.parent.CRM && window.parent.CRM.resizeCustomerModal) {
+      const form = document.querySelector('form.customer-create-form');
+      const h = form
+        ? Math.ceil(form.getBoundingClientRect().height + (form.offsetTop || 0) + 8)
+        : Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.CRM.resizeCustomerModal(h);
+    }
   }
 
   province.addEventListener('change', loadWards);
   customerType.addEventListener('change', syncBusinessByType);
-  isBusiness.addEventListener('change', toggleInvoice);
+  isBusiness.addEventListener('change', function(){
+    toggleInvoice();
+    setTimeout(notifyModalResize, 50);
+  });
   toggleInvoice();
+  setTimeout(notifyModalResize, 50);
+  window.addEventListener('resize', notifyModalResize);
 })();
 </script>
 }

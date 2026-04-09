@@ -17,4 +17,5 @@ public class ServicePrice
     public string? Description { get; set; }
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; }
+    public ServicePricePolicy? Policy { get; set; }
 }

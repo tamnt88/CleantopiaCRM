@@ -1,0 +1,8 @@
+﻿@{
+    var current = (ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty).ToLowerInvariant();
+}
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <a href="/ServicePrices/Categories" class="btn @(current == "categories" ? "btn-primary" : "btn-outline-primary")">Nhóm dịch vụ</a>
+    <a href="/ServicePrices" class="btn @(current == "index" ? "btn-primary" : "btn-outline-primary")">Bảng giá dịch vụ</a>
+    <a href="/ServicePrices/Create" class="btn @(current == "create" ? "btn-primary" : "btn-outline-primary")">Thêm giá dịch vụ</a>
+</div>

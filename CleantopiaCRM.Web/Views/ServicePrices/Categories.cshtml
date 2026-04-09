@@ -1,0 +1,265 @@
+@model List<CleantopiaCRM.Web.Controllers.ServiceCategoryVm>
+@{
+    ViewData["Title"] = "Nhóm dịch vụ";
+    ViewData["BreadcrumbParent"] = "Bảng giá dịch vụ";
+    ViewData["BreadcrumbParentUrl"] = "/ServicePrices";
+    var parentOptions = ViewBag.ParentOptions as List<CleantopiaCRM.Web.Entities.ServiceCategory> ?? new();
+    var parentMap = parentOptions.ToDictionary(x => x.Id, x => x.ParentId);
+
+    int GetNodeLevel(CleantopiaCRM.Web.Entities.ServiceCategory node)
+    {
+        var level = 1;
+        var p = node.ParentId;
+        var guard = 0;
+        while (p.HasValue && parentMap.TryGetValue(p.Value, out var parentId) && guard < 12)
+        {
+            level++;
+            p = parentId;
+            guard++;
+        }
+        return level;
+    }
+
+    string GetTreePrefix(int level)
+    {
+        if (level <= 1) return string.Empty;
+        return string.Concat(Enumerable.Repeat("|--", level - 1)) + " ";
+    }
+}
+<link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
+<link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" />
+
+<div class="d-flex justify-content-between align-items-center mb-3 dt-compact form-select2">
+    <h4 class="mb-0">Nhóm dịch vụ</h4>
+    <button type="button" class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+        <i class="fa-solid fa-plus"></i> Tạo danh mục
+    </button>
+</div>
+
+<div class="table-responsive dt-compact">
+    <table id="serviceCategoryTable" class="table table-striped table-bordered align-middle w-100">
+        <thead class="table-light">
+            <tr>
+                <th style="width:60px">#</th>
+                <th>Tên danh mục</th>
+                <th>Đường dẫn</th>
+                <th style="width:240px">Danh mục cha</th>
+                <th style="width:100px">Cấp</th>
+                <th style="width:140px">Số danh mục con</th>
+                <th style="width:120px">Trạng thái</th>
+                <th style="width:150px">Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Count == 0)
+        {
+            <tr><td colspan="8" class="text-center text-muted py-4">Chưa có danh mục.</td></tr>
+        }
+        else
+        {
+            var idx = 1;
+            foreach (var c in Model)
+            {
+                <tr>
+                    <td>@idx</td>
+                    <td>@c.Name</td>
+                    <td>@c.Path</td>
+                    <td>@(c.ParentName ?? "-")</td>
+                    <td>@c.Level</td>
+                    <td>@c.ChildCount</td>
+                    <td>
+                        @if (c.IsActive)
+                        {
+                            <span class="status-tag status-active">Áp dụng</span>
+                        }
+                        else
+                        {
+                            <span class="status-tag status-inactive">Ngưng</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-primary js-open-rename"
+                                data-id="@c.Id" data-name="@c.Name" data-parent-id="@c.ParentId" data-active="@c.IsActive">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger js-open-delete"
+                                data-id="@c.Id" data-name="@c.Name">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                idx++;
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/ServicePrices/CreateCategory">
+                <input type="hidden" name="returnUrl" value="/ServicePrices/Categories" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Tạo danh mục</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Tên danh mục</label>
+                        <input name="name" class="form-control" placeholder="Ví dụ: Máy lạnh" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Danh mục cha</label>
+                        <select name="parentId" class="form-select js-select2-cat" data-placeholder="-- Cấp cha (để trống nếu là gốc) --">
+                            <option value="">-- Cấp cha (để trống nếu là gốc) --</option>
+                            @foreach (var p in parentOptions)
+                            {
+                                var lvl = GetNodeLevel(p);
+                                <option value="@p.Id">@($"{GetTreePrefix(lvl)}{p.Name}")</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Trạng thái</label>
+                        <select name="isActive" class="form-select">
+                            <option value="true">Áp dụng</option>
+                            <option value="false">Ngưng</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-brand">Tạo danh mục</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="renameCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/ServicePrices/RenameCategory">
+                <input type="hidden" name="returnUrl" value="/ServicePrices/Categories" />
+                <input type="hidden" name="id" id="renameId" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Cập nhật danh mục</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label">Tên danh mục</label>
+                        <input name="newName" id="renameName" class="form-control" required />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Danh mục cha</label>
+                        <select name="parentId" id="renameParentId" class="form-select js-select2-cat" data-placeholder="-- Cấp cha (để trống nếu là gốc) --">
+                            <option value="">-- Cấp cha (để trống nếu là gốc) --</option>
+                            @foreach (var p in parentOptions)
+                            {
+                                var lvl = GetNodeLevel(p);
+                                <option value="@p.Id">@($"{GetTreePrefix(lvl)}{p.Name}")</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Trạng thái</label>
+                        <select name="isActive" id="renameIsActive" class="form-select">
+                            <option value="true">Áp dụng</option>
+                            <option value="false">Ngưng</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-brand">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" action="/ServicePrices/DeleteCategory">
+                <input type="hidden" name="returnUrl" value="/ServicePrices/Categories" />
+                <input type="hidden" name="id" id="deleteId" />
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">Xóa danh mục</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Bạn có chắc muốn xóa danh mục <strong id="deleteName"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/select2/dist/js/select2.min.js"></script>
+<script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function() {
+    $('#serviceCategoryTable').DataTable({
+        pageLength: 20,
+        lengthChange: false,
+        dom: "t<'d-flex justify-content-end mt-2'p>",
+        pagingType: 'full_numbers',
+        order: [[0, 'asc']],
+        language: {
+            info: 'Hiển thị _START_ đến _END_ trong _TOTAL_ danh mục',
+            infoEmpty: 'Không có dữ liệu',
+            zeroRecords: 'Không tìm thấy dữ liệu phù hợp',
+            paginate: { first: '«', last: '»', next: '›', previous: '‹' }
+        },
+        columnDefs: [{ targets: 7, orderable: false, searchable: false }]
+    });
+
+    const renameModal = new bootstrap.Modal(document.getElementById('renameCategoryModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    const createModalEl = document.getElementById('createCategoryModal');
+    const renameModalEl = document.getElementById('renameCategoryModal');
+
+    function initSelect2InModal(modalEl) {
+        const $modal = $(modalEl);
+        $modal.find('.js-select2-cat').select2({
+            width: '100%',
+            allowClear: true,
+            dropdownParent: $modal,
+            placeholder: function() {
+                return $(this).data('placeholder') || '';
+            }
+        });
+    }
+
+    initSelect2InModal(createModalEl);
+    initSelect2InModal(renameModalEl);
+
+    document.querySelectorAll('.js-open-rename').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('renameId').value = this.dataset.id || '';
+            document.getElementById('renameName').value = this.dataset.name || '';
+            $('#renameParentId').val(this.dataset.parentId || '').trigger('change');
+            document.getElementById('renameIsActive').value = this.dataset.active === 'True' ? 'true' : 'false';
+            renameModal.show();
+        });
+    });
+
+    document.querySelectorAll('.js-open-delete').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('deleteId').value = this.dataset.id || '';
+            document.getElementById('deleteName').textContent = this.dataset.name || '';
+            deleteModal.show();
+        });
+    });
+})();
+</script>
+}

@@ -5,6 +5,12 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var fallbackViewRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+if (!Directory.Exists(Path.Combine(builder.Environment.ContentRootPath, "Views"))
+    && Directory.Exists(Path.Combine(fallbackViewRoot, "Views")))
+{
+    builder.WebHost.UseContentRoot(fallbackViewRoot);
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
@@ -35,6 +41,12 @@ builder.Services.AddControllersWithViews(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DbInitializer.EnsureServicePricingSchemaAsync(db);
+}
 
 if (!app.Environment.IsDevelopment())
 {

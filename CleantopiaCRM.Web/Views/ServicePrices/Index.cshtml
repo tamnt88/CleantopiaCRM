@@ -2,13 +2,167 @@
 @{
     ViewData["Title"] = "Bảng giá dịch vụ";
     var categories = ViewBag.Categories as List<string> ?? new();
-    var route = new Dictionary<string, string?>();
-    foreach (var key in Context.Request.Query.Keys)
-    {
-        if (!string.Equals(key, "page", StringComparison.OrdinalIgnoreCase)) route[key] = Context.Request.Query[key].ToString();
-    }
 }
-<div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0">Bảng giá dịch vụ</h4><a href="/ServicePrices/Create" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Thêm</a></div>
-<form method="get" class="card card-body mb-3"><div class="row g-2"><div class="col-md-3"><input name="q" value="@Model.Query" class="form-control" placeholder="Tên dịch vụ" /></div><div class="col-md-3"><select name="category" class="form-select"><option value="">-- Nhóm dịch vụ --</option>@foreach(var c in categories){<option value="@c" selected="@(c==(string?)ViewBag.Category)">@c</option>}</select></div><div class="col-md-2"><input type="number" min="0" name="minPrice" value="@ViewBag.MinPrice" class="form-control" placeholder="Giá từ" /></div><div class="col-md-2"><input type="number" min="0" name="maxPrice" value="@ViewBag.MaxPrice" class="form-control" placeholder="Giá đến" /></div><div class="col-md-2"><select name="isActive" class="form-select"><option value="">-- Trạng thái --</option><option value="true" selected="@("true"==(string?)ViewBag.IsActive)">Áp dụng</option><option value="false" selected="@("false"==(string?)ViewBag.IsActive)">Ngưng</option></select></div><div class="col-md-12 d-flex gap-2"><button class="btn btn-primary"><i class="fa-solid fa-filter"></i> Lọc</button><a class="btn btn-outline-secondary" href="/ServicePrices"><i class="fa-solid fa-rotate-left"></i> Đặt lại</a></div></div></form>
-<div class="table-responsive"><table class="table table-striped table-bordered align-middle"><thead class="table-light"><tr><th>Nhóm</th><th>Dịch vụ</th><th>Biến thể</th><th>Giá</th><th>Trạng thái</th><th style="width:160px">Thao tác</th></tr></thead><tbody>@foreach(var x in Model.Items){<tr><td>@x.Category</td><td>@x.ServiceName</td><td>@x.VariantName</td><td>@x.Price.ToString("N0")</td><td>@(x.IsActive ? "Áp dụng" : "Ngưng")</td><td><a href="/ServicePrices/Edit/@x.Id" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-pen-to-square"></i></a> <form method="post" action="/ServicePrices/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa dịch vụ?')"><i class="fa-solid fa-trash"></i></button></form></td></tr>}</tbody></table></div>
-@if (Model.TotalPages > 1){<nav><ul class="pagination">@for (var i = 1; i <= Model.TotalPages; i++){<li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-all-route-data="route" asp-route-page="@i">@i</a></li>}</ul></nav>}
+<link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" />
+<style>
+    .service-price-index .filter-box { background: transparent; border: 0; border-radius: 0; padding: 0; }
+    .service-price-index .table-wrap { background: transparent; border: 0; border-radius: 0; padding: 0; }
+    .service-price-index .dataTables_wrapper .pagination { margin-bottom: 0; gap: 0 !important; }
+    .service-price-index .dataTables_wrapper .pagination .page-item { margin: 0 !important; }
+    .service-price-index .dataTables_wrapper .pagination .page-link { border-radius: 0; min-width: 36px; text-align: center; margin-left: 0 !important; }
+    .service-price-index .dataTables_wrapper .pagination .page-item:first-child .page-link { border-top-left-radius: .375rem; border-bottom-left-radius: .375rem; }
+    .service-price-index .dataTables_wrapper .pagination .page-item:last-child .page-link { border-top-right-radius: .375rem; border-bottom-right-radius: .375rem; }
+</style>
+
+<div class="service-price-index">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Bảng giá dịch vụ</h4>
+        <button type="button" class="btn btn-brand js-open-service-modal" data-url="/ServicePrices/Create?modal=1"><i class="fa-solid fa-plus"></i> Thêm</button>
+    </div>
+
+    <div class="filter-box mb-3">
+        <div class="row g-2">
+            <div class="col-md-2"><input id="filterQ" class="form-control" value="@Model.Query" placeholder="Tên dịch vụ" /></div>
+            <div class="col-md-2"><select id="filterCategory" class="form-select"><option value="">-- Nhóm dịch vụ --</option>@foreach(var c in categories){<option value="@c" selected="@(c==(string?)ViewBag.Category)">@c</option>}</select></div>
+            <div class="col-md-2"><input id="filterMinPrice" type="number" min="0" class="form-control" value="@ViewBag.MinPrice" placeholder="Giá từ" /></div>
+            <div class="col-md-2"><input id="filterMaxPrice" type="number" min="0" class="form-control" value="@ViewBag.MaxPrice" placeholder="Giá đến" /></div>
+            <div class="col-md-2"><select id="filterStatus" class="form-select"><option value="">-- Trạng thái --</option><option value="Áp dụng" selected="@("true"==(string?)ViewBag.IsActive)">Áp dụng</option><option value="Ngưng" selected="@("false"==(string?)ViewBag.IsActive)">Ngưng</option></select></div>
+            <div class="col-md-2 d-flex gap-2"><button id="btnApplyFilter" type="button" class="btn btn-primary w-50"><i class="fa-solid fa-filter"></i> Lọc</button><button id="btnClearFilter" type="button" class="btn btn-outline-secondary w-50"><i class="fa-solid fa-rotate-left"></i> Đặt lại</button></div>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <div class="table-responsive">
+            <table id="servicePriceTable" class="table table-striped table-bordered align-middle mb-0 w-100">
+                <thead class="table-light"><tr><th>Nhóm</th><th>Dịch vụ</th><th>Biến thể</th><th>Đơn vị</th><th>Giá</th><th>Chu kỳ CS (ngày)</th><th>Trạng thái</th><th style="width:160px">Thao tác</th></tr></thead>
+                <tbody>
+                @foreach(var x in Model.Items)
+                {
+                    <tr>
+                        <td>@x.Category</td>
+                        <td>@x.ServiceName</td>
+                        <td>@x.VariantName</td>
+                        <td>@(x.Policy?.Unit?.Name ?? x.Unit)</td>
+                        <td data-price="@x.Price">@x.Price.ToString("N0")</td>
+                        <td>@(x.Policy?.RecareCycleDays ?? 180)</td>
+                        <td>@(x.IsActive ? "Áp dụng" : "Ngưng")</td>
+                        <td><button type="button" class="btn btn-sm btn-outline-primary js-open-service-modal" data-url="/ServicePrices/Edit/@x.Id?modal=1"><i class="fa-solid fa-pen-to-square"></i></button> <form method="post" action="/ServicePrices/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa dịch vụ?')"><i class="fa-solid fa-trash"></i></button></form></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="modal fade customer-modal" id="servicePriceCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="servicePriceCrudModalTitle">Bảng giá dịch vụ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="servicePriceCrudFrame" src="about:blank" style="width:100%;height:360px;border:0;display:block;" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function(){
+  const crudModalEl = document.getElementById('servicePriceCrudModal');
+  const crudModal = new bootstrap.Modal(crudModalEl);
+  const crudFrame = document.getElementById('servicePriceCrudFrame');
+  const crudTitle = document.getElementById('servicePriceCrudModalTitle');
+
+  window.CRM = window.CRM || {};
+  window.CRM.closeServicePriceModal = function(shouldReload){
+    crudModal.hide();
+    crudFrame.src = 'about:blank';
+    if (shouldReload) window.location.reload();
+  };
+  window.CRM.resizeServicePriceModal = function(contentHeight){
+    const viewportCap = Math.floor(window.innerHeight * 0.78);
+    const measured = (contentHeight || 0) + 8;
+    const target = Math.max(280, Math.min(measured, viewportCap));
+    crudFrame.style.height = `${target}px`;
+  };
+
+  $(document).on('click', '.js-open-service-modal', function(){
+    const url = this.getAttribute('data-url');
+    crudTitle.textContent = url.includes('/Edit/') ? 'Cập nhật giá dịch vụ' : 'Thêm giá dịch vụ';
+    crudFrame.src = url;
+    crudModal.show();
+  });
+
+  crudFrame.addEventListener('load', function(){
+    try {
+      const doc = crudFrame.contentWindow.document;
+      const measure = function(){
+        const h = Math.max(
+          doc.body ? doc.body.scrollHeight : 0,
+          doc.documentElement ? doc.documentElement.scrollHeight : 0
+        );
+        window.CRM.resizeServicePriceModal(h);
+      };
+      measure();
+      setTimeout(measure, 80);
+      setTimeout(measure, 220);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  let minPrice = parseFloat($('#filterMinPrice').val()) || null;
+  let maxPrice = parseFloat($('#filterMaxPrice').val()) || null;
+
+  $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+    if (settings.nTable.id !== 'servicePriceTable') return true;
+    const rowPrice = parseFloat($(settings.aoData[dataIndex].nTr).find('td[data-price]').data('price')) || 0;
+    const rowStatus = data[6] || '';
+    const statusFilter = $('#filterStatus').val();
+    if (minPrice !== null && rowPrice < minPrice) return false;
+    if (maxPrice !== null && rowPrice > maxPrice) return false;
+    if (statusFilter && rowStatus !== statusFilter) return false;
+    return true;
+  });
+
+  const table = $('#servicePriceTable').DataTable({
+    pageLength: 20,
+    lengthChange: false,
+    searching: true,
+    dom: "t<'d-flex justify-content-end mt-2'p>",
+    pagingType: 'full_numbers',
+    order: [[0, 'asc'], [1, 'asc']],
+    language: {
+      info: 'Hiển thị _START_ đến _END_ trong _TOTAL_ dòng',
+      infoEmpty: 'Không có dữ liệu',
+      zeroRecords: 'Không tìm thấy dữ liệu phù hợp',
+      paginate: { first: '«', last: '»', next: '›', previous: '‹' }
+    },
+    columnDefs: [{ targets: 7, orderable: false, searchable: false }]
+  });
+
+  function applyFilter() {
+    minPrice = parseFloat($('#filterMinPrice').val()) || null;
+    maxPrice = parseFloat($('#filterMaxPrice').val()) || null;
+    table.column(0).search($('#filterCategory').val());
+    table.column(1).search($('#filterQ').val());
+    table.draw();
+  }
+
+  $('#btnApplyFilter').on('click', applyFilter);
+  $('#btnClearFilter').on('click', function(){
+    $('#filterQ, #filterMinPrice, #filterMaxPrice').val('');
+    $('#filterCategory, #filterStatus').val('');
+    minPrice = null; maxPrice = null;
+    table.search(''); table.columns().search(''); table.draw();
+  });
+
+  if ($('#filterQ').val() || $('#filterCategory').val() || $('#filterMinPrice').val() || $('#filterMaxPrice').val() || $('#filterStatus').val()) applyFilter();
+})();
+</script>
+}

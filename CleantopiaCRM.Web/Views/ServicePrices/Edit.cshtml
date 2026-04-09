@@ -1,13 +1,71 @@
-@model CleantopiaCRM.Web.Entities.ServicePrice
-<h4>D?ch v?</h4>
-<form method="post" class="row g-2">
-<div class="col-md-3"><input asp-for="Category" class="form-control" placeholder="Nh�m (M�y l?nh...)" /></div>
-<div class="col-md-4"><input asp-for="ServiceName" class="form-control" placeholder="T�n d?ch v?" /></div>
-<div class="col-md-2"><input asp-for="VariantName" class="form-control" placeholder="Bi?n th?" /></div>
-<div class="col-md-1"><input asp-for="Unit" class="form-control" placeholder="�on v?" /></div>
-<div class="col-md-2"><input asp-for="Price" class="form-control" placeholder="Gi�" /></div>
-<div class="col-md-2"><input asp-for="DisplayOrder" class="form-control" placeholder="STT" /></div>
-<div class="col-md-10"><textarea asp-for="Description" class="form-control" placeholder="M� t?"></textarea></div>
-<div class="col-md-2"><select asp-for="IsActive" class="form-select"><option value="true">Hi?n</option><option value="false">?n</option></select></div>
-<div class="col-12"><button class="btn btn-brand">Luu</button></div>
+﻿@model CleantopiaCRM.Web.Entities.ServicePrice
+@{
+    ViewData["Title"] = "Sửa giá dịch vụ";
+    ViewData["BreadcrumbParent"] = "Bảng giá dịch vụ";
+    ViewData["BreadcrumbParentUrl"] = "/ServicePrices";
+    var categories = ViewBag.Categories as List<string> ?? new();
+    var isModal = (bool?)ViewBag.IsModal == true;
+}
+@if (!isModal)
+{
+    <h4>Sửa giá dịch vụ</h4>
+}
+<form method="post" class="row g-2 service-price-form">
+    @if (isModal)
+    {
+        <input type="hidden" name="modal" value="1" />
+    }
+    <div class="col-md-3">
+        <label asp-for="Category" class="form-label">Nhóm dịch vụ</label>
+        <input asp-for="Category" class="form-control" list="serviceCategories" placeholder="Ví dụ: Máy lạnh" />
+        <span asp-validation-for="Category" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ServiceName" class="form-label">Tên dịch vụ</label>
+        <input asp-for="ServiceName" class="form-control" placeholder="Ví dụ: Vệ sinh máy lạnh" />
+        <span asp-validation-for="ServiceName" class="text-danger"></span>
+    </div>
+    <div class="col-md-2">
+        <label asp-for="Price" class="form-label">Giá</label>
+        <input asp-for="Price" type="number" min="0" class="form-control" placeholder="200000" />
+    </div>
+
+    <div class="col-12 d-flex gap-2">
+        <button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button>
+        @if (isModal)
+        {
+            <button type="button" class="btn btn-outline-secondary" onclick="window.parent && window.parent.CRM && window.parent.CRM.closeServicePriceModal(false);"><i class="fa-solid fa-xmark"></i> Đóng</button>
+        }
+        else
+        {
+            <a href="/ServicePrices" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
+        }
+    </div>
 </form>
+
+<datalist id="serviceCategories">
+@foreach (var c in categories)
+{
+    <option value="@c"></option>
+}
+</datalist>
+
+@section Scripts {
+<partial name="_ValidationScriptsPartial" />
+<script>
+(function(){
+  function notifyModalResize(){
+    if (window.parent && window.parent.CRM && window.parent.CRM.resizeServicePriceModal) {
+      const form = document.querySelector('form.service-price-form');
+      const h = form
+        ? Math.ceil(form.getBoundingClientRect().height + (form.offsetTop || 0) + 12)
+        : Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+      window.parent.CRM.resizeServicePriceModal(h);
+    }
+  }
+
+  setTimeout(notifyModalResize, 60);
+  window.addEventListener('resize', notifyModalResize);
+})();
+</script>
+}

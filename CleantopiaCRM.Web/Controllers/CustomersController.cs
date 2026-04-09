@@ -10,6 +10,25 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi,GiamSat")]
 public class CustomersController(AppDbContext db) : Controller
 {
+    private bool IsModalRequest()
+    {
+        if (string.Equals(Request.Query["modal"], "1", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return Request.HasFormContentType
+               && string.Equals(Request.Form["modal"], "1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IActionResult ModalSuccessResult()
+    {
+        if (!IsModalRequest())
+            return RedirectToAction(nameof(Index));
+
+        return Content(
+            "<script>window.parent && window.parent.CRM && window.parent.CRM.closeCustomerModal(true);</script>",
+            "text/html");
+    }
+
     public async Task<IActionResult> Index(string? q, int? sourceId, int? typeId, int? countryId, int page = 1, int pageSize = 10)
     {
         var query = db.Customers
@@ -31,12 +50,10 @@ public class CustomersController(AppDbContext db) : Controller
         if (typeId.HasValue) query = query.Where(x => x.CustomerTypeId == typeId.Value);
         if (countryId.HasValue) query = query.Where(x => x.CountryId == countryId.Value);
 
-        var total = await query.CountAsync();
         var items = await query
             .OrderByDescending(x => x.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync();
+        var total = items.Count;
 
         ViewBag.SourceId = sourceId;
         ViewBag.TypeId = typeId;
@@ -45,13 +62,21 @@ public class CustomersController(AppDbContext db) : Controller
         ViewBag.Sources = await db.CustomerSources.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToListAsync();
         ViewBag.Types = await db.CustomerTypes.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToListAsync();
 
-        return View(new PagedResult<Customer> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
+        return View(new PagedResult<Customer> { Items = items, Page = 1, PageSize = total == 0 ? 10 : total, TotalItems = total, Query = q });
     }
 
     public async Task<IActionResult> Create()
     {
-        await LoadLookup();
-        return View(new Customer { CreatedAt = DateTime.Now });
+        var defaultCountryId = await GetDefaultCountryIdAsync();
+        var defaultProvinceId = await GetDefaultProvinceIdAsync();
+        await LoadLookup(defaultProvinceId);
+        ViewBag.ProvinceId = defaultProvinceId;
+        ViewBag.IsModal = IsModalRequest();
+        return View(new Customer
+        {
+            CreatedAt = DateTime.Now,
+            CountryId = defaultCountryId
+        });
     }
 
     [HttpPost]
@@ -66,16 +91,22 @@ public class CustomersController(AppDbContext db) : Controller
         string? contactEmail,
         string? siteName)
     {
+        ValidateCreateRequiredFields(item, houseNumber, street, provinceId, wardId, contactName, contactPhone);
+
         if (!ModelState.IsValid)
         {
-            await LoadLookup();
+            SetCreateFormInput(houseNumber, street, provinceId, wardId, siteName, contactName, contactPhone, contactEmail);
+            await LoadLookup(provinceId);
+            ViewBag.IsModal = IsModalRequest();
             return View(item);
         }
 
         ValidateBusinessFields(item);
         if (!ModelState.IsValid)
         {
-            await LoadLookup();
+            SetCreateFormInput(houseNumber, street, provinceId, wardId, siteName, contactName, contactPhone, contactEmail);
+            await LoadLookup(provinceId);
+            ViewBag.IsModal = IsModalRequest();
             return View(item);
         }
 
@@ -103,7 +134,7 @@ public class CustomersController(AppDbContext db) : Controller
         db.CustomerServiceAddresses.Add(serviceAddress);
         await db.SaveChangesAsync();
 
-        return RedirectToAction(nameof(Index));
+        return ModalSuccessResult();
     }
 
     public async Task<IActionResult> Edit(int id)
@@ -119,7 +150,17 @@ public class CustomersController(AppDbContext db) : Controller
             .FirstOrDefaultAsync();
 
         ViewBag.DefaultAddress = defaultAddress;
-        await LoadLookup();
+        SetAddressFormInput(
+            defaultAddress?.Address?.HouseNumber,
+            defaultAddress?.Address?.Street,
+            defaultAddress?.Address?.ProvinceId,
+            defaultAddress?.Address?.WardId,
+            defaultAddress?.SiteName,
+            defaultAddress?.ContactName,
+            defaultAddress?.ContactPhone,
+            defaultAddress?.ContactEmail);
+        await LoadLookup(defaultAddress?.Address?.ProvinceId);
+        ViewBag.IsModal = IsModalRequest();
         return View(item);
     }
 
@@ -140,11 +181,23 @@ public class CustomersController(AppDbContext db) : Controller
         var old = await db.Customers.FirstOrDefaultAsync(x => x.Id == id);
         if (old is null) return NotFound();
 
+        ValidateCreateRequiredFields(item, houseNumber, street, provinceId, wardId, contactName, contactPhone);
+        if (!ModelState.IsValid)
+        {
+            ViewBag.DefaultAddress = await db.CustomerServiceAddresses.Include(x => x.Address).FirstOrDefaultAsync(x => x.Id == defaultServiceAddressId);
+            SetAddressFormInput(houseNumber, street, provinceId, wardId, siteName, contactName, contactPhone, contactEmail);
+            await LoadLookup(provinceId);
+            ViewBag.IsModal = IsModalRequest();
+            return View(item);
+        }
+
         ValidateBusinessFields(item);
         if (!ModelState.IsValid)
         {
             ViewBag.DefaultAddress = await db.CustomerServiceAddresses.Include(x => x.Address).FirstOrDefaultAsync(x => x.Id == defaultServiceAddressId);
-            await LoadLookup();
+            SetAddressFormInput(houseNumber, street, provinceId, wardId, siteName, contactName, contactPhone, contactEmail);
+            await LoadLookup(provinceId);
+            ViewBag.IsModal = IsModalRequest();
             return View(item);
         }
 
@@ -209,7 +262,7 @@ public class CustomersController(AppDbContext db) : Controller
         foreach (var addr in allAddresses) addr.IsDefault = addr.Id == serviceAddress.Id;
 
         await db.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
+        return ModalSuccessResult();
     }
 
     [HttpPost]
@@ -226,13 +279,90 @@ public class CustomersController(AppDbContext db) : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task LoadLookup()
+    private async Task LoadLookup(int? selectedProvinceId = null)
     {
         ViewBag.Countries = await db.Countries.OrderBy(x => x.Name).ToListAsync();
-        ViewBag.Provinces = await db.GhnProvinces.OrderBy(x => x.ProvinceName).ToListAsync();
-        ViewBag.Wards = await db.GhnWards.OrderBy(x => x.WardName).ToListAsync();
+        var provinces = await db.GhnProvinces.OrderBy(x => x.ProvinceName).ToListAsync();
+        ViewBag.Provinces = provinces;
+        var provinceId = selectedProvinceId.GetValueOrDefault();
+        if (provinceId <= 0)
+        {
+            provinceId = await GetDefaultProvinceIdAsync();
+        }
+        ViewBag.ProvinceId = provinceId;
+        ViewBag.Wards = await db.GhnWards
+            .Where(x => x.ProvinceId == provinceId)
+            .OrderBy(x => x.WardName)
+            .ToListAsync();
         ViewBag.Sources = await db.CustomerSources.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToListAsync();
         ViewBag.Types = await db.CustomerTypes.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToListAsync();
+    }
+
+    private async Task<int> GetDefaultCountryIdAsync()
+    {
+        var country = await db.Countries.FirstOrDefaultAsync(x =>
+            x.Code == "VN" ||
+            x.Name == "Vietnam" ||
+            x.Name == "Viet Nam");
+        return country?.Id ?? (await db.Countries.OrderBy(x => x.Name).Select(x => x.Id).FirstOrDefaultAsync());
+    }
+
+    private async Task<int> GetDefaultProvinceIdAsync()
+    {
+        var province = await db.GhnProvinces.FirstOrDefaultAsync(x =>
+            x.ProvinceName.Contains("Hồ Chí Minh") ||
+            x.ProvinceName.Contains("Ho Chi Minh"));
+        return province?.Id ?? (await db.GhnProvinces.OrderBy(x => x.ProvinceName).Select(x => x.Id).FirstOrDefaultAsync());
+    }
+
+    private void ValidateCreateRequiredFields(Customer item, string houseNumber, string street, int provinceId, int wardId, string contactName, string? contactPhone)
+    {
+        if (string.IsNullOrWhiteSpace(item.Phone))
+            ModelState.AddModelError(nameof(item.Phone), "Vui lòng nhập số điện thoại.");
+
+        if (item.CountryId <= 0)
+            ModelState.AddModelError(nameof(item.CountryId), "Vui lòng chọn quốc gia.");
+
+        if (!item.CustomerSourceId.HasValue || item.CustomerSourceId.Value <= 0)
+            ModelState.AddModelError(nameof(item.CustomerSourceId), "Vui lòng chọn nguồn khách.");
+
+        if (!item.CustomerTypeId.HasValue || item.CustomerTypeId.Value <= 0)
+            ModelState.AddModelError(nameof(item.CustomerTypeId), "Vui lòng chọn loại khách.");
+
+        if (string.IsNullOrWhiteSpace(houseNumber))
+            ModelState.AddModelError("houseNumber", "Vui lòng nhập số nhà.");
+
+        if (string.IsNullOrWhiteSpace(street))
+            ModelState.AddModelError("street", "Vui lòng nhập tên đường.");
+
+        if (provinceId <= 0)
+            ModelState.AddModelError("provinceId", "Vui lòng chọn tỉnh/thành.");
+
+        if (wardId <= 0)
+            ModelState.AddModelError("wardId", "Vui lòng chọn phường/xã.");
+
+        if (string.IsNullOrWhiteSpace(contactName))
+            ModelState.AddModelError("contactName", "Vui lòng nhập người liên hệ.");
+
+        if (string.IsNullOrWhiteSpace(contactPhone))
+            ModelState.AddModelError("contactPhone", "Vui lòng nhập số điện thoại liên hệ.");
+    }
+
+    private void SetCreateFormInput(string houseNumber, string street, int provinceId, int wardId, string? siteName, string contactName, string? contactPhone, string? contactEmail)
+    {
+        SetAddressFormInput(houseNumber, street, provinceId, wardId, siteName, contactName, contactPhone, contactEmail);
+    }
+
+    private void SetAddressFormInput(string? houseNumber, string? street, int? provinceId, int? wardId, string? siteName, string? contactName, string? contactPhone, string? contactEmail)
+    {
+        ViewBag.HouseNumber = houseNumber;
+        ViewBag.Street = street;
+        ViewBag.ProvinceId = provinceId;
+        ViewBag.WardId = wardId;
+        ViewBag.SiteName = siteName;
+        ViewBag.ContactName = contactName;
+        ViewBag.ContactPhone = contactPhone;
+        ViewBag.ContactEmail = contactEmail;
     }
 
     private void ValidateBusinessFields(Customer item)

@@ -11,6 +11,7 @@
     var breadcrumbTitle = ViewData["Title"]?.ToString() ?? currentController;
     var breadcrumbParent = ViewData["BreadcrumbParent"]?.ToString();
     var breadcrumbParentUrl = ViewData["BreadcrumbParentUrl"]?.ToString();
+    var isModalRequest = string.Equals(Context.Request.Query["modal"], "1", StringComparison.OrdinalIgnoreCase);
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -25,6 +26,8 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
+@if (!isModalRequest)
+{
 <header class="topbar">
     <div class="topbar-left">
         <a class="brand" href="/Dashboard/Index">
@@ -93,48 +96,54 @@
         </div>
     </div>
 </header>
+}
 
 <main class="app-main">
-    @if (TempData["Message"] is string msg)
-    {
-        <div class="alert alert-success">@msg</div>
-    }
+    <div class="@(isModalRequest ? "container-fluid p-2" : "container py-3")">
+        @if (TempData["Message"] is string msg)
+        {
+            <div class="alert alert-success">@msg</div>
+        }
 
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <nav aria-label="breadcrumb" class="breadcrumb-box mb-3">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="/Dashboard/Index">Trang chủ</a></li>
-                @if (!string.IsNullOrWhiteSpace(breadcrumbParent))
-                {
-                    if (!string.IsNullOrWhiteSpace(breadcrumbParentUrl))
+        @if (!isModalRequest && User.Identity?.IsAuthenticated == true)
+        {
+            <nav aria-label="breadcrumb" class="breadcrumb-box mb-3">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/Dashboard/Index">Trang chủ</a></li>
+                    @if (!string.IsNullOrWhiteSpace(breadcrumbParent))
                     {
-                        <li class="breadcrumb-item"><a href="@breadcrumbParentUrl">@breadcrumbParent</a></li>
+                        if (!string.IsNullOrWhiteSpace(breadcrumbParentUrl))
+                        {
+                            <li class="breadcrumb-item"><a href="@breadcrumbParentUrl">@breadcrumbParent</a></li>
+                        }
+                        else
+                        {
+                            <li class="breadcrumb-item">@breadcrumbParent</li>
+                        }
                     }
-                    else
+                    @if (!string.Equals(currentController, "Dashboard", StringComparison.OrdinalIgnoreCase) || !string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase))
                     {
-                        <li class="breadcrumb-item">@breadcrumbParent</li>
+                        <li class="breadcrumb-item active" aria-current="page">@breadcrumbTitle</li>
                     }
-                }
-                @if (!string.Equals(currentController, "Dashboard", StringComparison.OrdinalIgnoreCase) || !string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase))
-                {
-                    <li class="breadcrumb-item active" aria-current="page">@breadcrumbTitle</li>
-                }
-            </ol>
-        </nav>
-    }
+                </ol>
+            </nav>
+        }
 
-    <section class="page-shell content-frame">
-        @RenderBody()
-    </section>
+        <section class="page-shell @(isModalRequest ? "" : "content-frame")">
+            @RenderBody()
+        </section>
+    </div>
 </main>
 
+@if (!isModalRequest)
+{
 <footer class="app-footer">
     <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>© @DateTime.Now.Year CLEAN TOPIA CRM</div>
         <div>77 Tạ Hiện, Phường Cát Lái, TP Hồ Chí Minh | Hotline: 090 769 1010</div>
     </div>
 </footer>
+}
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

@@ -4,56 +4,339 @@
     var countries = ViewBag.Countries as List<CleantopiaCRM.Web.Entities.Country> ?? new();
     var sources = ViewBag.Sources as List<CleantopiaCRM.Web.Entities.CustomerSource> ?? new();
     var types = ViewBag.Types as List<CleantopiaCRM.Web.Entities.CustomerType> ?? new();
-    var route = new Dictionary<string, string?>();
-    foreach (var key in Context.Request.Query.Keys)
-    {
-        if (!string.Equals(key, "page", StringComparison.OrdinalIgnoreCase)) route[key] = Context.Request.Query[key].ToString();
-    }
 }
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Khách hàng</h4>
-    <a href="/Customers/Create" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Thêm</a>
-</div>
-<form method="get" class="card card-body mb-3">
-    <div class="row g-2">
-        <div class="col-md-3"><input name="q" value="@Model.Query" class="form-control" placeholder="Tên / SĐT / Email" /></div>
-        <div class="col-md-3"><select name="sourceId" class="form-select"><option value="">-- Nguồn khách --</option>@foreach (var s in sources){<option value="@s.Id" selected="@(s.Id == (int?)ViewBag.SourceId)">@s.Name</option>}</select></div>
-        <div class="col-md-3"><select name="typeId" class="form-select"><option value="">-- Loại khách --</option>@foreach (var t in types){<option value="@t.Id" selected="@(t.Id == (int?)ViewBag.TypeId)">@t.Name</option>}</select></div>
-        <div class="col-md-2"><select name="countryId" class="form-select"><option value="">-- Quốc gia --</option>@foreach (var c in countries){<option value="@c.Id" selected="@(c.Id == (int?)ViewBag.CountryId)">@c.Name</option>}</select></div>
-        <div class="col-md-1 d-flex gap-2"><button class="btn btn-primary w-100"><i class="fa-solid fa-filter"></i></button></div>
+<link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" />
+<style>
+    .customer-index h4 {
+        color: #0f2346;
+        font-weight: 800;
+        letter-spacing: .2px;
+    }
+
+    .customer-index .filter-box {
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 8px 0 12px;
+    }
+
+    .customer-index .table-wrap {
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        padding: 0;
+    }
+
+    .customer-index .dataTables_wrapper .pagination {
+        margin-bottom: 0;
+        gap: 0 !important;
+    }
+
+    .customer-index .dataTables_wrapper .pagination .page-item {
+        margin: 0 !important;
+    }
+
+    .customer-index .dataTables_wrapper .pagination .page-link {
+        border-radius: 0;
+        min-width: 36px;
+        text-align: center;
+        margin-left: 0 !important;
+    }
+
+    .customer-index .dataTables_wrapper .pagination .page-item:first-child .page-link {
+        border-top-left-radius: .375rem;
+        border-bottom-left-radius: .375rem;
+    }
+
+    .customer-index .dataTables_wrapper .pagination .page-item:last-child .page-link {
+        border-top-right-radius: .375rem;
+        border-bottom-right-radius: .375rem;
+    }
+
+    .customer-index .table {
+        border: 0 !important;
+    }
+
+    .customer-index .table th,
+    .customer-index .table td {
+        border-left: 0 !important;
+        border-right: 0 !important;
+    }
+
+    .customer-index .table thead th {
+        color: #11264b;
+        font-weight: 800;
+    }
+
+    .customer-modal .modal-dialog {
+        max-width: 790px;
+    }
+
+    .customer-modal .modal-header {
+        border-bottom: 1px solid #e6ebf5;
+        padding: .75rem 1rem;
+        background: #f9fbff;
+    }
+
+    .customer-modal .modal-title {
+        color: #10284d;
+        font-weight: 700;
+        font-size: 1.05rem;
+    }
+
+    .customer-modal .modal-content {
+        border: 1px solid #dbe5f3;
+        border-radius: 10px;
+        box-shadow: 0 14px 40px rgba(11, 35, 72, .18);
+        overflow: hidden;
+    }
+
+    .customer-modal .modal-body {
+        padding: 0;
+        background: #fff;
+    }
+
+    .customer-modal iframe {
+        width: 100%;
+        height: 360px;
+        border: 0;
+        display: block;
+    }
+</style>
+
+<div class="customer-index">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Khách hàng</h4>
+        <button type="button" class="btn btn-brand js-open-customer-modal" data-url="/Customers/Create?modal=1"><i class="fa-solid fa-plus"></i> Thêm</button>
     </div>
-</form>
-<div class="table-responsive">
-    <table class="table table-striped table-bordered align-middle">
-        <thead class="table-light"><tr><th>Tên</th><th>Nguồn</th><th>Loại khách</th><th>Quốc gia</th><th>Địa điểm DV</th><th>SĐT</th><th style="width:240px">Thao tác</th></tr></thead>
-        <tbody>
-        @foreach (var x in Model.Items)
-        {
-            var defaultAddress = x.ServiceAddresses.OrderByDescending(a => a.IsDefault).ThenBy(a => a.Id).FirstOrDefault();
-            <tr>
-                <td>
-                    @x.Name
-                    @if (x.IsBusiness)
-                    {
-                        <span class="badge text-bg-warning ms-1">Doanh nghiệp</span>
-                    }
-                </td>
-                <td>@x.CustomerSource?.Name</td>
-                <td>@x.CustomerType?.Name</td>
-                <td>@x.Country?.Name</td>
-                <td>@(defaultAddress?.Address?.FullText ?? "-")</td>
-                <td>@x.Phone</td>
-                <td>
-                    <a href="/Customers/Edit/@x.Id" class="btn btn-sm btn-outline-primary" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></a>
-                    <a href="/CustomerServiceAddresses?customerId=@x.Id" class="btn btn-sm btn-outline-info" title="Địa chỉ dịch vụ"><i class="fa-solid fa-map-location-dot"></i></a>
-                    <form method="post" action="/Customers/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa khách hàng?')"><i class="fa-solid fa-trash"></i></button></form>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
+
+    <div class="filter-box mb-3">
+        <div class="row g-2">
+            <div class="col-md-3">
+                <input id="filterQ" class="form-control" placeholder="Tên / SĐT / Email" />
+            </div>
+            <div class="col-md-3">
+                <select id="filterSource" class="form-select">
+                    <option value="">-- Nguồn khách --</option>
+                    @foreach (var s in sources){<option value="@s.Name">@s.Name</option>}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filterType" class="form-select">
+                    <option value="">-- Loại khách --</option>
+                    @foreach (var t in types){<option value="@t.Name">@t.Name</option>}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select id="filterCountry" class="form-select">
+                    <option value="">-- Quốc gia --</option>
+                    @foreach (var c in countries){<option value="@c.Name">@c.Name</option>}
+                </select>
+            </div>
+            <div class="col-md-1 d-flex gap-2">
+                <button id="btnClearFilter" type="button" class="btn btn-outline-secondary w-100" title="Xóa lọc"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <div class="table-responsive">
+            <table id="customerTable" class="table table-striped table-bordered align-middle mb-0 w-100">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tên</th>
+                        <th>Nguồn</th>
+                        <th>Loại khách</th>
+                        <th>Quốc gia</th>
+                        <th>Địa điểm DV</th>
+                        <th>SĐT</th>
+                        <th style="width:220px">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var x in Model.Items)
+                {
+                    var defaultAddress = x.ServiceAddresses.OrderByDescending(a => a.IsDefault).ThenBy(a => a.Id).FirstOrDefault();
+                    <tr>
+                        <td>
+                            @x.Name
+                            @if (x.IsBusiness)
+                            {
+                                <span class="badge text-bg-warning ms-1">Doanh nghiệp</span>
+                            }
+                        </td>
+                        <td>@x.CustomerSource?.Name</td>
+                        <td>@x.CustomerType?.Name</td>
+                        <td>@x.Country?.Name</td>
+                        <td>@(defaultAddress?.Address?.FullText ?? "-")</td>
+                        <td>@x.Phone</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary js-open-customer-modal" data-url="/Customers/Edit/@x.Id?modal=1" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <a href="/CustomerServiceAddresses?customerId=@x.Id" class="btn btn-sm btn-outline-info" title="Địa chỉ dịch vụ"><i class="fa-solid fa-map-location-dot"></i></a>
+                            <button type="button" class="btn btn-sm btn-outline-danger js-delete-customer" data-id="@x.Id" data-name="@x.Name"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
-@if (Model.TotalPages > 1)
-{
-    <nav><ul class="pagination">@for (var i = 1; i <= Model.TotalPages; i++){<li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-all-route-data="route" asp-route-page="@i">@i</a></li>}</ul></nav>
+
+<div class="modal fade customer-modal" id="customerCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerCrudModalTitle">Khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <iframe id="customerCrudFrame" src="about:blank" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xóa khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Bạn có chắc muốn xóa <strong id="deleteCustomerName"></strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <form method="post" id="deleteCustomerForm">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function(){
+  const crudModalEl = document.getElementById('customerCrudModal');
+  const crudModal = new bootstrap.Modal(crudModalEl);
+  const crudFrame = document.getElementById('customerCrudFrame');
+  const crudTitle = document.getElementById('customerCrudModalTitle');
+
+  const deleteModalEl = document.getElementById('deleteCustomerModal');
+  const deleteModal = new bootstrap.Modal(deleteModalEl);
+  const deleteName = document.getElementById('deleteCustomerName');
+  const deleteForm = document.getElementById('deleteCustomerForm');
+
+  window.CRM = window.CRM || {};
+  window.CRM.closeCustomerModal = function(shouldReload){
+    crudModal.hide();
+    crudFrame.src = 'about:blank';
+    if (shouldReload) {
+      window.location.reload();
+    }
+  };
+  window.CRM.resizeCustomerModal = function(contentHeight){
+    const viewportCap = Math.floor(window.innerHeight * 0.78);
+    const measured = (contentHeight || 0) + 8;
+    const target = Math.max(280, Math.min(measured, viewportCap));
+    crudFrame.style.height = `${target}px`;
+  };
+
+  function openCrudModal(url, title){
+    crudTitle.textContent = title || 'Khách hàng';
+    crudFrame.src = url;
+    crudModal.show();
+  }
+
+  crudFrame.addEventListener('load', function(){
+    try {
+      const doc = crudFrame.contentWindow.document;
+      const measure = function(){
+        const h = Math.max(
+          doc.body ? doc.body.scrollHeight : 0,
+          doc.documentElement ? doc.documentElement.scrollHeight : 0
+        );
+        window.CRM.resizeCustomerModal(h);
+      };
+      measure();
+      setTimeout(measure, 80);
+      setTimeout(measure, 220);
+    } catch (e) {
+      // ignore
+    }
+  });
+
+  const table = $('#customerTable').DataTable({
+    pageLength: 20,
+    lengthChange: false,
+    dom: "t<'d-flex justify-content-end mt-2'p>",
+    pagingType: 'full_numbers',
+    order: [[0, 'asc']],
+    language: {
+      lengthMenu: 'Hiển thị _MENU_ dòng',
+      info: 'Hiển thị _START_ đến _END_ trong _TOTAL_ khách hàng',
+      infoEmpty: 'Không có dữ liệu',
+      zeroRecords: 'Không tìm thấy dữ liệu phù hợp',
+      paginate: {
+        first: '«',
+        last: '»',
+        next: '›',
+        previous: '‹'
+      }
+    },
+    columnDefs: [
+      { targets: 6, orderable: false, searchable: false }
+    ]
+  });
+
+  $('#filterQ').on('keyup', function(){
+    table.search(this.value).draw();
+  });
+
+  $('#filterSource').on('change', function(){
+    table.column(1).search(this.value).draw();
+  });
+
+  $('#filterType').on('change', function(){
+    table.column(2).search(this.value).draw();
+  });
+
+  $('#filterCountry').on('change', function(){
+    table.column(3).search(this.value).draw();
+  });
+
+  $('#btnClearFilter').on('click', function(){
+    $('#filterQ').val('');
+    $('#filterSource').val('');
+    $('#filterType').val('');
+    $('#filterCountry').val('');
+
+    table.search('');
+    table.column(1).search('');
+    table.column(2).search('');
+    table.column(3).search('');
+    table.draw();
+  });
+
+  $(document).on('click', '.js-open-customer-modal', function(){
+    const url = this.getAttribute('data-url');
+    const title = url.includes('/Edit/') ? 'Cập nhật khách hàng' : 'Thêm khách hàng';
+    openCrudModal(url, title);
+  });
+
+  $(document).on('click', '.js-delete-customer', function(){
+    const id = this.getAttribute('data-id');
+    const name = this.getAttribute('data-name') || 'khách hàng này';
+    deleteName.textContent = name;
+    deleteForm.action = `/Customers/Delete/${id}`;
+    deleteModal.show();
+  });
+})();
+</script>
 }

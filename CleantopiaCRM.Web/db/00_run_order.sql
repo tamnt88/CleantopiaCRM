@@ -13,4 +13,6 @@
 
 -- 7) 06_dashboard_data_upgrade.sql (bo sung du lieu dashboard 360)
 -- 8) 07_customer_master_upgrade.sql (nguon khach, loai khach, nhieu dia chi dich vu, hoa don doanh nghiep)
+-- 9) 08_service_price_policy_upgrade.sql (tach don vi + chu ky tai cham soc cho bang gia dich vu)
+-- 10) 09_service_categories_parent_child.sql (quan ly danh muc dich vu cha/con thuần)
 

@@ -72,7 +72,9 @@ public class MenuService(AppDbContext db) : IMenuService
         foreach (var n in lookup.Values)
             n.Children = n.Children.OrderBy(x => x.SortOrder).ToList();
 
-        return roots.OrderBy(x => x.SortOrder).ToList();
+        var rootMenus = roots.OrderBy(x => x.SortOrder).ToList();
+        EnsureServiceSubmenus(rootMenus);
+        return rootMenus;
     }
 
     private static List<MenuNodeVm> GetFallbackMenu(string roleName)
@@ -90,6 +92,65 @@ public class MenuService(AppDbContext db) : IMenuService
         if (roleName == "Admin")
             menu.Add(new MenuNodeVm { Id = 7, Title = "Hệ thống", Url = "/Users", SortOrder = 70, IconCss = "fa-solid fa-gear" });
 
+        EnsureServiceSubmenus(menu);
         return menu;
+    }
+
+    private static void EnsureServiceSubmenus(List<MenuNodeVm> roots)
+    {
+        var serviceRoot = roots.FirstOrDefault(x =>
+            (x.Url?.StartsWith("/ServicePrices", StringComparison.OrdinalIgnoreCase) ?? false) ||
+            x.Title.Contains("Dịch vụ", StringComparison.OrdinalIgnoreCase));
+
+        if (serviceRoot is null) return;
+
+        serviceRoot.Children ??= [];
+
+        AddIfMissing(serviceRoot.Children, new MenuNodeVm
+        {
+            Id = 30001,
+            Title = "Nhóm dịch vụ",
+            Url = "/ServicePrices/Categories",
+            IconCss = "fa-solid fa-layer-group",
+            SortOrder = 1
+        });
+
+        AddIfMissing(serviceRoot.Children, new MenuNodeVm
+        {
+            Id = 30002,
+            Title = "Bảng giá dịch vụ",
+            Url = "/ServicePrices",
+            IconCss = "fa-solid fa-table-list",
+            SortOrder = 2
+        });
+
+        AddIfMissing(serviceRoot.Children, new MenuNodeVm
+        {
+            Id = 30003,
+            Title = "Đơn vị tính",
+            Url = "/ServiceUnits",
+            IconCss = "fa-solid fa-ruler-combined",
+            SortOrder = 3
+        });
+
+        var legacy = serviceRoot.Children.FirstOrDefault(x =>
+            string.Equals(x.Url, "/ServicePrices/Create", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(x.Title, "Thêm giá dịch vụ", StringComparison.OrdinalIgnoreCase));
+        if (legacy is not null)
+        {
+            legacy.Title = "Đơn vị tính";
+            legacy.Url = "/ServiceUnits";
+            legacy.IconCss = "fa-solid fa-ruler-combined";
+            legacy.SortOrder = 3;
+        }
+
+        serviceRoot.Children = serviceRoot.Children.OrderBy(x => x.SortOrder).ToList();
+    }
+
+    private static void AddIfMissing(List<MenuNodeVm> children, MenuNodeVm item)
+    {
+        if (children.Any(x => string.Equals(x.Url, item.Url, StringComparison.OrdinalIgnoreCase)))
+            return;
+        children.Add(item);
     }
 }

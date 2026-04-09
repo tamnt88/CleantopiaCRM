@@ -18,6 +18,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<ServicePrice> ServicePrices => Set<ServicePrice>();
+    public DbSet<ServiceCategory> ServiceCategories => Set<ServiceCategory>();
+    public DbSet<ServiceUnit> ServiceUnits => Set<ServiceUnit>();
+    public DbSet<ServicePricePolicy> ServicePricePolicies => Set<ServicePricePolicy>();
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
@@ -35,5 +38,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<RoleMenu>().HasIndex(x => new { x.RoleName, x.MenuItemId }).IsUnique();
         modelBuilder.Entity<CustomerSource>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<CustomerType>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<ServiceCategory>().HasIndex(x => new { x.ParentId, x.Name }).IsUnique();
+        modelBuilder.Entity<ServiceCategory>()
+            .HasOne(x => x.Parent)
+            .WithMany()
+            .HasForeignKey(x => x.ParentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ServiceUnit>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<ServicePrice>()
+            .HasOne(x => x.Policy)
+            .WithOne(x => x.ServicePrice)
+            .HasForeignKey<ServicePricePolicy>(x => x.ServicePriceId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ServicePricePolicy>()
+            .HasOne(x => x.Unit)
+            .WithMany()
+            .HasForeignKey(x => x.UnitId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }
