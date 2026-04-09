@@ -1,17 +1,45 @@
-@model CleantopiaCRM.Web.Entities.Customer
-@{ var countries = (IEnumerable<CleantopiaCRM.Web.Entities.Country>)ViewBag.Countries; var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces; var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards; }
-<h4>Kh�ch h�ng</h4>
+﻿@model CleantopiaCRM.Web.Entities.Customer
+@{
+    ViewData["Title"] = "Thêm khách hàng";
+    var countries = (IEnumerable<CleantopiaCRM.Web.Entities.Country>)ViewBag.Countries;
+    var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
+    var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
+    var sources = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerSource>)ViewBag.Sources;
+    var types = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerType>)ViewBag.Types;
+}
+<h4>Thêm khách hàng</h4>
 <form method="post" class="row g-2">
-<div class="col-md-6"><input asp-for="Name" class="form-control" placeholder="T�n" /></div>
-<div class="col-md-3"><input asp-for="Phone" class="form-control" placeholder="S�T" /></div>
-<div class="col-md-3"><input asp-for="Email" class="form-control" placeholder="Email" /></div>
-<div class="col-md-4"><select class="form-select" asp-for="CountryId">@foreach(var c in countries){<option value="@c.Id">@c.Name</option>}</select></div>
-<div class="col-md-2"><input class="form-control" name="houseNumber" value="@Model.Address?.HouseNumber" placeholder="S? nh�" /></div>
-<div class="col-md-4"><input class="form-control" name="street" value="@Model.Address?.Street" placeholder="T�n du?ng" /></div>
-<div class="col-md-3"><select class="form-select" id="provinceId" name="provinceId">@foreach(var p in provinces){<option value="@p.Id">@p.ProvinceName</option>}</select></div>
-<div class="col-md-3"><select class="form-select" id="wardId" name="wardId">@foreach(var w in wards){<option value="@w.Id">@w.WardName</option>}</select></div>
-<div class="col-12"><textarea asp-for="Notes" class="form-control" placeholder="Ghi ch�"></textarea></div>
-<div class="col-12"><button class="btn btn-brand">Luu</button></div>
+    <div class="col-md-4"><input asp-for="Name" class="form-control" placeholder="Tên khách hàng" /></div>
+    <div class="col-md-2"><input asp-for="Phone" class="form-control" placeholder="SĐT" /></div>
+    <div class="col-md-3"><input asp-for="Email" class="form-control" placeholder="Email" /></div>
+    <div class="col-md-3"><select asp-for="CountryId" class="form-select">@foreach(var c in countries){<option value="@c.Id">@c.Name</option>}</select></div>
+
+    <div class="col-md-4"><select asp-for="CustomerSourceId" class="form-select"><option value="">-- Nguồn khách --</option>@foreach(var s in sources){<option value="@s.Id">@s.Name</option>}</select></div>
+    <div class="col-md-4"><select asp-for="CustomerTypeId" id="customerTypeId" class="form-select"><option value="">-- Loại khách --</option>@foreach(var t in types){<option value="@t.Id" data-business="@(t.IsBusiness.ToString().ToLower())">@t.Name</option>}</select></div>
+    <div class="col-md-4 form-check d-flex align-items-center px-4"><input asp-for="IsBusiness" class="form-check-input" id="isBusiness" /><label class="form-check-label ms-2" for="isBusiness">Khách doanh nghiệp</label></div>
+
+    <div id="invoiceBlock" class="row g-2 border rounded p-2 m-0 mt-1">
+        <div class="col-12 fw-semibold">Thông tin xuất hóa đơn (khách hàng)</div>
+        <div class="col-md-4"><input asp-for="CompanyName" class="form-control" placeholder="Tên công ty" /></div>
+        <div class="col-md-2"><input asp-for="TaxCode" class="form-control" placeholder="Mã số thuế" /></div>
+        <div class="col-md-6"><input asp-for="BillingAddress" class="form-control" placeholder="Địa chỉ xuất hóa đơn" /></div>
+        <div class="col-md-4"><input asp-for="BillingEmail" class="form-control" placeholder="Email nhận hóa đơn" /></div>
+        <div class="col-md-3"><input asp-for="BillingPhone" class="form-control" placeholder="SĐT hóa đơn" /></div>
+        <div class="col-md-5"><input asp-for="BillingReceiver" class="form-control" placeholder="Người nhận hóa đơn" /></div>
+    </div>
+
+    <div class="col-12 fw-semibold mt-3">Địa chỉ dịch vụ mặc định + người liên hệ</div>
+    <div class="col-md-2"><input class="form-control" name="houseNumber" placeholder="Số nhà" /></div>
+    <div class="col-md-3"><input class="form-control" name="street" placeholder="Tên đường" /></div>
+    <div class="col-md-3"><select class="form-select" id="provinceId" name="provinceId">@foreach(var p in provinces){<option value="@p.Id">@p.ProvinceName</option>}</select></div>
+    <div class="col-md-4"><select class="form-select" id="wardId" name="wardId">@foreach(var w in wards){<option value="@w.Id">@w.WardName</option>}</select></div>
+    <div class="col-md-4"><input class="form-control" name="siteName" placeholder="Tên địa điểm (VD: Trụ sở, Chi nhánh 1)" /></div>
+    <div class="col-md-4"><input class="form-control" name="contactName" placeholder="Người liên hệ" /></div>
+    <div class="col-md-2"><input class="form-control" name="contactPhone" placeholder="SĐT liên hệ" /></div>
+    <div class="col-md-2"><input class="form-control" name="contactEmail" placeholder="Email liên hệ" /></div>
+
+    <div class="col-12"><textarea asp-for="Notes" class="form-control" placeholder="Ghi chú"></textarea></div>
+    <div class="col-12 d-flex gap-2"><button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button><a href="/Customers" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a></div>
 </form>
 
 @section Scripts {
@@ -19,12 +47,31 @@
 (function(){
   const province = document.getElementById('provinceId');
   const ward = document.getElementById('wardId');
+  const isBusiness = document.getElementById('isBusiness');
+  const customerType = document.getElementById('customerTypeId');
+  const invoiceBlock = document.getElementById('invoiceBlock');
+
   async function loadWards(){
     const res = await fetch(`/api/address/wards?provinceId=${province.value}`);
     const data = await res.json();
     ward.innerHTML = data.map(x => `<option value="${x.id}">${x.wardName}</option>`).join('');
   }
+
+  function syncBusinessByType(){
+    const opt = customerType.options[customerType.selectedIndex];
+    if (!opt) return;
+    if (opt.dataset.business === 'true') isBusiness.checked = true;
+    toggleInvoice();
+  }
+
+  function toggleInvoice(){
+    invoiceBlock.style.display = isBusiness.checked ? 'flex' : 'none';
+  }
+
   province.addEventListener('change', loadWards);
+  customerType.addEventListener('change', syncBusinessByType);
+  isBusiness.addEventListener('change', toggleInvoice);
+  toggleInvoice();
 })();
 </script>
 }

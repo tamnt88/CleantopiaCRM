@@ -49,6 +49,18 @@ wwwroot\lib\bootstrap\dist\js\bootstrap.js.map
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js
 wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
 wwwroot\lib\bootstrap\LICENSE
+wwwroot\lib\flaticon\css\uicons-regular-rounded.css
+wwwroot\lib\flaticon\fonts\uicons-regular-rounded.woff
+wwwroot\lib\flaticon\fonts\uicons-regular-rounded.woff2
+wwwroot\lib\fontawesome\css\all.min.css
+wwwroot\lib\fontawesome\webfonts\fa-brands-400.ttf
+wwwroot\lib\fontawesome\webfonts\fa-brands-400.woff2
+wwwroot\lib\fontawesome\webfonts\fa-regular-400.ttf
+wwwroot\lib\fontawesome\webfonts\fa-regular-400.woff2
+wwwroot\lib\fontawesome\webfonts\fa-solid-900.ttf
+wwwroot\lib\fontawesome\webfonts\fa-solid-900.woff2
+wwwroot\lib\fontawesome\webfonts\fa-v4compatibility.ttf
+wwwroot\lib\fontawesome\webfonts\fa-v4compatibility.woff2
 wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.js
 wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.min.js
 wwwroot\lib\jquery-validation-unobtrusive\LICENSE.txt
@@ -111,6 +123,8 @@ D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\bootstrap\dist\j
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\bootstrap\dist\js\bootstrap.js.map
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\bootstrap\dist\js\bootstrap.min.js
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\bootstrap\dist\js\bootstrap.min.js.map
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\flaticon\css\uicons-regular-rounded.css
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\fontawesome\css\all.min.css
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.js
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\jquery-validation-unobtrusive\dist\jquery.validate.unobtrusive.min.js
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\wwwroot\lib\jquery-validation-unobtrusive\LICENSE.txt

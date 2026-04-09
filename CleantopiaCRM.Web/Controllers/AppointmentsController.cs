@@ -10,14 +10,24 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi,KyThuat,GiamSat")]
 public class AppointmentsController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, string? status, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, string? status, string? type, int? customerId, DateTime? fromDate, DateTime? toDate, int page = 1, int pageSize = 10)
     {
         var query = db.Appointments.Include(x => x.Customer).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Customer!.Name.Contains(q));
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(x => x.Status == status);
+        if (!string.IsNullOrWhiteSpace(type)) query = query.Where(x => x.Type == type);
+        if (customerId.HasValue) query = query.Where(x => x.CustomerId == customerId.Value);
+        if (fromDate.HasValue) query = query.Where(x => x.ScheduledAt.Date >= fromDate.Value.Date);
+        if (toDate.HasValue) query = query.Where(x => x.ScheduledAt.Date <= toDate.Value.Date);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.ScheduledAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         ViewBag.Status = status;
+        ViewBag.Type = type;
+        ViewBag.CustomerId = customerId;
+        ViewBag.FromDate = fromDate;
+        ViewBag.ToDate = toDate;
+        ViewBag.Customers = await db.Customers.OrderBy(x => x.Name).ToListAsync();
+        ViewBag.Types = await db.Appointments.Select(x => x.Type).Distinct().OrderBy(x => x).ToListAsync();
         return View(new PagedResult<Appointment> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

@@ -1,4 +1,4 @@
-using CleantopiaCRM.Web.Data;
+﻿using CleantopiaCRM.Web.Data;
 using CleantopiaCRM.Web.Entities;
 using CleantopiaCRM.Web.Models.Common;
 using CleantopiaCRM.Web.Services;
@@ -11,12 +11,18 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin")]
 public class UsersController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, string? role, bool? isActive, int page = 1, int pageSize = 10)
     {
         var query = db.AppUsers.Include(x => x.Employee).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Username.Contains(q) || x.FullName.Contains(q));
+        if (!string.IsNullOrWhiteSpace(role)) query = query.Where(x => x.Role == role);
+        if (isActive.HasValue) query = query.Where(x => x.IsActive == isActive.Value);
+
         var total = await query.CountAsync();
         var items = await query.OrderBy(x => x.Username).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        ViewBag.Role = role;
+        ViewBag.IsActive = isActive?.ToString().ToLowerInvariant();
         return View(new PagedResult<AppUser> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

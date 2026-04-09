@@ -1,0 +1,33 @@
+﻿@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.CustomerServiceAddress>
+@{
+    var customer = ViewBag.Customer as CleantopiaCRM.Web.Entities.Customer;
+    ViewData["Title"] = "Địa chỉ dịch vụ";
+    var route = new Dictionary<string, string?>();
+    foreach (var key in Context.Request.Query.Keys)
+    {
+        if (!string.Equals(key, "page", StringComparison.OrdinalIgnoreCase)) route[key] = Context.Request.Query[key].ToString();
+    }
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Địa chỉ dịch vụ - @customer?.Name</h4>
+    <a href="/CustomerServiceAddresses/Create?customerId=@customer?.Id" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Thêm địa chỉ</a>
+</div>
+<form method="get" class="card card-body mb-3">
+    <input type="hidden" name="customerId" value="@customer?.Id" />
+    <div class="row g-2">
+        <div class="col-md-6"><input name="q" value="@Model.Query" class="form-control" placeholder="Tìm theo địa điểm / người liên hệ" /></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100"><i class="fa-solid fa-filter"></i> Lọc</button></div>
+        <div class="col-md-2"><a class="btn btn-outline-secondary w-100" href="/CustomerServiceAddresses?customerId=@customer?.Id"><i class="fa-solid fa-rotate-left"></i> Đặt lại</a></div>
+        <div class="col-md-2"><a class="btn btn-outline-dark w-100" href="/Customers/Edit/@customer?.Id"><i class="fa-solid fa-arrow-left"></i> Khách hàng</a></div>
+    </div>
+</form>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered align-middle">
+        <thead class="table-light"><tr><th>Địa điểm</th><th>Địa chỉ</th><th>Liên hệ</th><th>Hóa đơn riêng</th><th>Mặc định</th><th style="width:160px">Thao tác</th></tr></thead>
+        <tbody>@foreach(var x in Model.Items){<tr><td>@x.SiteName</td><td>@x.Address?.FullText</td><td>@x.ContactName<br/><small>@x.ContactPhone - @x.ContactEmail</small></td><td>@(x.HasOwnInvoiceInfo ? "Có" : "Không")</td><td>@(x.IsDefault ? "Mặc định" : "")</td><td><a href="/CustomerServiceAddresses/Edit/@x.Id" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-pen-to-square"></i></a> <form method="post" action="/CustomerServiceAddresses/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa địa chỉ dịch vụ?')"><i class="fa-solid fa-trash"></i></button></form></td></tr>}</tbody>
+    </table>
+</div>
+@if (Model.TotalPages > 1)
+{
+    <nav><ul class="pagination">@for (var i = 1; i <= Model.TotalPages; i++){<li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-all-route-data="route" asp-route-page="@i">@i</a></li>}</ul></nav>
+}

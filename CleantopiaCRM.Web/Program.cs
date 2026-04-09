@@ -18,6 +18,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<GhnSettings>(builder.Configuration.GetSection("GHN"));
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<GhnAddressSyncService>();
+builder.Services.AddScoped<IMenuService, MenuService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

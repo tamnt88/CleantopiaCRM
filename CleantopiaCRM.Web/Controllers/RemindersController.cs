@@ -10,12 +10,21 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi")]
 public class RemindersController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, int? customerId, bool? isDone, DateTime? dueFrom, DateTime? dueTo, int page = 1, int pageSize = 10)
     {
         var query = db.MaintenanceReminders.Include(x => x.Customer).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Customer!.Name.Contains(q) || x.ServiceName.Contains(q));
+        if (customerId.HasValue) query = query.Where(x => x.CustomerId == customerId.Value);
+        if (isDone.HasValue) query = query.Where(x => x.IsDone == isDone.Value);
+        if (dueFrom.HasValue) query = query.Where(x => x.NextReminderDate >= dueFrom.Value.Date);
+        if (dueTo.HasValue) query = query.Where(x => x.NextReminderDate <= dueTo.Value.Date);
         var total = await query.CountAsync();
         var items = await query.OrderBy(x => x.NextReminderDate).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewBag.CustomerId = customerId;
+        ViewBag.IsDone = isDone;
+        ViewBag.DueFrom = dueFrom;
+        ViewBag.DueTo = dueTo;
+        ViewBag.Customers = await db.Customers.OrderBy(x => x.Name).ToListAsync();
         return View(new PagedResult<MaintenanceReminder> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

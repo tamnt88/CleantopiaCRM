@@ -1,0 +1,51 @@
+﻿@model CleantopiaCRM.Web.Entities.CustomerServiceAddress
+@{ 
+    ViewData["Title"] = "Sửa địa chỉ dịch vụ";
+    var customer = ViewBag.Customer as CleantopiaCRM.Web.Entities.Customer;
+    var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
+    var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
+}
+<h4>Sửa địa chỉ dịch vụ - @customer?.Name</h4>
+<form method="post" class="row g-2">
+    <input type="hidden" asp-for="CustomerId" />
+    <div class="col-md-3"><input class="form-control" name="houseNumber" value="@Model.Address?.HouseNumber" placeholder="Số nhà" /></div>
+    <div class="col-md-3"><input class="form-control" name="street" value="@Model.Address?.Street" placeholder="Tên đường" /></div>
+    <div class="col-md-3"><select class="form-select" id="provinceId" name="provinceId">@foreach(var p in provinces){<option value="@p.Id" selected="@(p.Id == Model.Address?.ProvinceId)">@p.ProvinceName</option>}</select></div>
+    <div class="col-md-3"><select class="form-select" id="wardId" name="wardId">@foreach(var w in wards){<option value="@w.Id" selected="@(w.Id == Model.Address?.WardId)">@w.WardName</option>}</select></div>
+    <div class="col-md-4"><input asp-for="SiteName" class="form-control" placeholder="Tên địa điểm" /></div>
+    <div class="col-md-3"><input asp-for="ContactName" class="form-control" placeholder="Người liên hệ" /></div>
+    <div class="col-md-2"><input asp-for="ContactPhone" class="form-control" placeholder="SĐT liên hệ" /></div>
+    <div class="col-md-3"><input asp-for="ContactEmail" class="form-control" placeholder="Email liên hệ" /></div>
+    <div class="col-md-2 form-check d-flex align-items-center px-4"><input asp-for="IsDefault" class="form-check-input" /><label class="form-check-label ms-2">Mặc định</label></div>
+    <div class="col-md-3 form-check d-flex align-items-center px-4"><input asp-for="HasOwnInvoiceInfo" id="hasOwnInvoiceInfo" class="form-check-input" /><label class="form-check-label ms-2">Có hóa đơn riêng</label></div>
+    <div id="invoiceSiteBlock" class="row g-2 border rounded p-2 m-0 mt-1">
+        <div class="col-12 fw-semibold">Thông tin xuất hóa đơn riêng của địa điểm</div>
+        <div class="col-md-4"><input asp-for="InvoiceCompanyName" class="form-control" placeholder="Tên công ty" /></div>
+        <div class="col-md-2"><input asp-for="InvoiceTaxCode" class="form-control" placeholder="Mã số thuế" /></div>
+        <div class="col-md-6"><input asp-for="InvoiceAddress" class="form-control" placeholder="Địa chỉ xuất hóa đơn" /></div>
+        <div class="col-md-4"><input asp-for="InvoiceEmail" class="form-control" placeholder="Email hóa đơn" /></div>
+        <div class="col-md-2"><input asp-for="InvoicePhone" class="form-control" placeholder="SĐT hóa đơn" /></div>
+        <div class="col-md-6"><input asp-for="InvoiceReceiver" class="form-control" placeholder="Người nhận hóa đơn" /></div>
+    </div>
+    <div class="col-md-2 form-check d-flex align-items-center px-4"><input asp-for="IsActive" class="form-check-input" /><label class="form-check-label ms-2">Kích hoạt</label></div>
+    <div class="col-12"><button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button> <a class="btn btn-outline-secondary" href="/CustomerServiceAddresses?customerId=@Model.CustomerId"><i class="fa-solid fa-arrow-left"></i> Quay lại</a></div>
+</form>
+@section Scripts {
+<script>
+(function(){
+  const province = document.getElementById('provinceId');
+  const ward = document.getElementById('wardId');
+  const hasOwnInvoiceInfo = document.getElementById('hasOwnInvoiceInfo');
+  const invoiceSiteBlock = document.getElementById('invoiceSiteBlock');
+  async function loadWards(){
+    const res = await fetch(`/api/address/wards?provinceId=${province.value}`);
+    const data = await res.json();
+    ward.innerHTML = data.map(x => `<option value="${x.id}">${x.wardName}</option>`).join('');
+  }
+  function toggleInvoice(){ invoiceSiteBlock.style.display = hasOwnInvoiceInfo.checked ? 'flex' : 'none'; }
+  province.addEventListener('change', loadWards);
+  hasOwnInvoiceInfo.addEventListener('change', toggleInvoice);
+  toggleInvoice();
+})();
+</script>
+}

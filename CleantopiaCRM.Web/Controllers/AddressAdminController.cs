@@ -1,4 +1,4 @@
-using CleantopiaCRM.Web.Services;
+﻿using CleantopiaCRM.Web.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +10,16 @@ public class AddressAdminController(GhnAddressSyncService syncService) : Control
     [HttpPost]
     public async Task<IActionResult> SyncGhn()
     {
-        await syncService.SyncAsync();
-        TempData["Message"] = "�� d?ng b? GHN th�nh c�ng.";
+        try
+        {
+            await syncService.SyncAsync();
+            TempData["Message"] = "Đã đồng bộ GHN thành công.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Message"] = $"Đồng bộ GHN thất bại: {ex.Message}";
+        }
+
         return RedirectToAction("Index", "Dashboard");
     }
 }

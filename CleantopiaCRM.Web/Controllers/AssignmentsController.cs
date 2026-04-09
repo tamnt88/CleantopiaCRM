@@ -10,12 +10,22 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi,GiamSat")]
 public class AssignmentsController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, int? employeeId, string? role, DateTime? fromDate, DateTime? toDate, int page = 1, int pageSize = 10)
     {
         var query = db.Assignments.Include(x => x.Appointment).ThenInclude(a => a!.Customer).Include(x => x.Employee).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Employee!.FullName.Contains(q) || x.Appointment!.Customer!.Name.Contains(q));
+        if (employeeId.HasValue) query = query.Where(x => x.EmployeeId == employeeId.Value);
+        if (!string.IsNullOrWhiteSpace(role)) query = query.Where(x => x.Role == role);
+        if (fromDate.HasValue) query = query.Where(x => x.Appointment != null && x.Appointment.ScheduledAt.Date >= fromDate.Value.Date);
+        if (toDate.HasValue) query = query.Where(x => x.Appointment != null && x.Appointment.ScheduledAt.Date <= toDate.Value.Date);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewBag.EmployeeId = employeeId;
+        ViewBag.Role = role;
+        ViewBag.FromDate = fromDate;
+        ViewBag.ToDate = toDate;
+        ViewBag.Employees = await db.Employees.OrderBy(x => x.FullName).ToListAsync();
+        ViewBag.Roles = await db.Assignments.Select(x => x.Role).Distinct().OrderBy(x => x).ToListAsync();
         return View(new PagedResult<Assignment> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

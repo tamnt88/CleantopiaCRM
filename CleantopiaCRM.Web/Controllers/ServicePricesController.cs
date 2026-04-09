@@ -10,14 +10,21 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi")]
 public class ServicePricesController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, string? category, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, string? category, bool? isActive, decimal? minPrice, decimal? maxPrice, int page = 1, int pageSize = 10)
     {
         var query = db.ServicePrices.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.ServiceName.Contains(q));
+        if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.ServiceName.Contains(q) || (x.VariantName ?? "").Contains(q));
         if (!string.IsNullOrWhiteSpace(category)) query = query.Where(x => x.Category == category);
+        if (isActive.HasValue) query = query.Where(x => x.IsActive == isActive.Value);
+        if (minPrice.HasValue) query = query.Where(x => x.Price >= minPrice.Value);
+        if (maxPrice.HasValue) query = query.Where(x => x.Price <= maxPrice.Value);
         var total = await query.CountAsync();
         var items = await query.OrderBy(x => x.Category).ThenBy(x => x.DisplayOrder).ThenBy(x => x.ServiceName).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
         ViewBag.Category = category;
+        ViewBag.IsActive = isActive;
+        ViewBag.MinPrice = minPrice;
+        ViewBag.MaxPrice = maxPrice;
+        ViewBag.Categories = await db.ServicePrices.Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync();
         return View(new PagedResult<ServicePrice> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

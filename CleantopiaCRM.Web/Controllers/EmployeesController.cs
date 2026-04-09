@@ -10,12 +10,16 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi,GiamSat")]
 public class EmployeesController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, string? role, bool? isActive, int page = 1, int pageSize = 10)
     {
         var query = db.Employees.Include(x => x.Address).ThenInclude(a => a!.Ward).ThenInclude(w => w!.Province).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.FullName.Contains(q) || x.EmployeeCode.Contains(q) || x.Phone.Contains(q));
+        if (!string.IsNullOrWhiteSpace(role)) query = query.Where(x => x.Role == role);
+        if (isActive.HasValue) query = query.Where(x => x.IsActive == isActive.Value);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.Id).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewBag.Role = role;
+        ViewBag.IsActive = isActive;
         return View(new PagedResult<Employee> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

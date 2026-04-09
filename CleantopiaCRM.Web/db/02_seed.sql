@@ -8,6 +8,32 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('dbo.CustomerSources', 'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM dbo.CustomerSources)
+BEGIN
+    INSERT INTO dbo.CustomerSources(Name, IsActive, SortOrder)
+    VALUES
+    (N'Trực tiếp', 1, 10),
+    (N'Website', 1, 20),
+    (N'Facebook', 1, 30),
+    (N'Zalo', 1, 40),
+    (N'Giới thiệu', 1, 50),
+    (N'Telesales', 1, 60);
+END
+GO
+
+IF OBJECT_ID('dbo.CustomerTypes', 'U') IS NOT NULL
+AND NOT EXISTS (SELECT 1 FROM dbo.CustomerTypes)
+BEGIN
+    INSERT INTO dbo.CustomerTypes(Name, IsBusiness, IsActive, SortOrder)
+    VALUES
+    (N'Cá nhân', 0, 1, 10),
+    (N'Hộ gia đình', 0, 1, 20),
+    (N'Doanh nghiệp', 1, 1, 30),
+    (N'Đại lý', 1, 1, 40);
+END
+GO
+
 DELETE FROM dbo.ServicePrices;
 GO
 

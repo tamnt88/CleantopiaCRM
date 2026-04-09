@@ -30,7 +30,6 @@ D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\LatoFont\La
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\LatoFont\Lato-Thin.ttf
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\LatoFont\Lato-ThinItalic.ttf
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\LatoFont\OFL.txt
-D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\CleantopiaCRM.Web.exe
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\CleantopiaCRM.Web.deps.json
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\CleantopiaCRM.Web.runtimeconfig.json
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\CleantopiaCRM.Web.dll
@@ -275,5 +274,9 @@ D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\refint\Clea
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\CleantopiaCRM.Web.pdb
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\CleantopiaCRM.Web.genruntimeconfig.cache
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\ref\CleantopiaCRM.Web.dll
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\CleantopiaCRM.Web.sourcelink.json
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\compressed\46sdojp8or-6dgn5slxmj.gz
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\compressed\65alf2xv9b-wjhuarmh55.gz
+D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\bin\Debug\net9.0\CleantopiaCRM.Web.exe
 D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
-D:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\compressed\nzv1754j7g-1hbbpk7tfb.gz
+d:\HOA XINH COMPANY\CleantopiaCRM\CleantopiaCRM.Web\obj\Debug\net9.0\compressed\nzv1754j7g-1vvk51akq0.gz

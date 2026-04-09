@@ -1,4 +1,17 @@
 ﻿@using System.Security.Claims
+@using CleantopiaCRM.Web.Services
+@using CleantopiaCRM.Web.ViewModels.Menu
+@inject IMenuService MenuService
+@{
+    var role = User.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+    var menus = User.Identity?.IsAuthenticated == true ? await MenuService.GetMenuAsync(role) : new List<MenuNodeVm>();
+    var currentPath = Context.Request.Path.Value?.ToLowerInvariant() ?? string.Empty;
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    var breadcrumbTitle = ViewData["Title"]?.ToString() ?? currentController;
+    var breadcrumbParent = ViewData["BreadcrumbParent"]?.ToString();
+    var breadcrumbParentUrl = ViewData["BreadcrumbParentUrl"]?.ToString();
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -7,47 +20,124 @@
     <title>@ViewData["Title"] - Clean Topia CRM</title>
     <link rel="icon" type="image/jpeg" href="~/images/fav.jpg" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" />
+    <link rel="stylesheet" href="~/lib/flaticon/css/uicons-regular-rounded.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-brand px-3">
-        <a class="navbar-brand d-flex align-items-center" href="/Dashboard/Index"><img src="~/images/logo.png" class="logo" alt="logo" /> Clean Topia CRM</a>
-        <div class="navbar-nav">
-            <a class="nav-link" href="/Customers">Khách hàng</a>
-            <a class="nav-link" href="/Employees">Nhân viên</a>
-            <a class="nav-link" href="/ServicePrices">Bảng giá</a>
-            <a class="nav-link" href="/Quotes">Báo giá</a>
-            <a class="nav-link" href="/Appointments">Lịch hẹn</a>
-            <a class="nav-link" href="/Assignments">Phân công</a>
-            <a class="nav-link" href="/Feedbacks">Feedback</a>
-            <a class="nav-link" href="/Reminders">Nhắc bảo trì</a>
-            <a class="nav-link" href="/Reports/Revenue">Doanh thu</a>
-            <a class="nav-link" href="/Reports/Summary">Tổng hợp</a>
-            @if (User.IsInRole("Admin"))
-            {
-                <a class="nav-link" href="/Users">Người dùng</a>
-            }
-        </div>
-        <div class="ms-auto text-white small d-flex align-items-center gap-2">
-            @if (User.IsInRole("Admin") || User.IsInRole("DieuPhoi"))
-            {
-                <form method="post" action="/AddressAdmin/SyncGhn">
-                    <button class="btn btn-sm btn-warning">Sync GHN</button>
-                </form>
-            }
-            <span>@User.FindFirstValue(ClaimTypes.GivenName) (@User.FindFirstValue(ClaimTypes.Role))</span>
-            <a class="btn btn-sm btn-light" href="/Account/Logout">Đăng xuất</a>
-        </div>
-    </nav>
-    <div class="container py-4">
-        @if (TempData["Message"] is string msg)
-        {
-            <div class="alert alert-success">@msg</div>
-        }
-        @RenderBody()
+<header class="topbar">
+    <div class="topbar-left">
+        <a class="brand" href="/Dashboard/Index">
+            <img src="~/images/logo.png" class="logo" alt="logo" />
+        </a>
     </div>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+
+    <nav class="top-menu">
+        @foreach (var m in menus)
+        {
+            var parentUrl = string.IsNullOrWhiteSpace(m.Url) ? "#" : m.Url;
+            var isParentActive = (!string.IsNullOrWhiteSpace(m.Url) && currentPath.StartsWith(m.Url.ToLowerInvariant()))
+                || m.Children.Any(c => !string.IsNullOrWhiteSpace(c.Url) && currentPath.StartsWith(c.Url!.ToLowerInvariant()));
+            if (m.Children.Count == 0)
+            {
+                <a class="top-link @(isParentActive ? "active" : "")" href="@parentUrl">
+                    <span class="menu-icon"><i class="@m.IconCss"></i></span>
+                    <span>@m.Title</span>
+                </a>
+            }
+            else
+            {
+                <div class="top-dropdown @(isParentActive ? "active" : "")">
+                    <a class="top-link @(isParentActive ? "active" : "")" href="@parentUrl">
+                        <span class="menu-icon"><i class="@m.IconCss"></i></span>
+                        <span>@m.Title</span>
+                    </a>
+                    <div class="top-dropdown-menu">
+                        @foreach (var c in m.Children)
+                        {
+                            var childUrl = string.IsNullOrWhiteSpace(c.Url) ? "#" : c.Url;
+                            var isChildActive = !string.IsNullOrWhiteSpace(c.Url) && currentPath.StartsWith(c.Url.ToLowerInvariant());
+                            <a class="top-dropdown-item @(isChildActive ? "active" : "")" href="@childUrl">
+                                <span class="menu-icon sub"><i class="@c.IconCss"></i></span>
+                                <span>@c.Title</span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </nav>
+
+    <div class="topbar-right">
+        <div class="top-dropdown user-dropdown">
+            <a class="user-chip" href="#"><i class="fa-regular fa-user"></i> Quản trị hệ thống <i class="fa-solid fa-caret-down"></i></a>
+            <div class="top-dropdown-menu top-dropdown-menu-right">
+                @if (User.IsInRole("Admin") || User.IsInRole("DieuPhoi"))
+                {
+                    <form method="post" action="/AddressAdmin/SyncGhn" class="m-0">
+                        <button type="submit" class="top-dropdown-item top-dropdown-button">
+                            <span class="menu-icon sub"><i class="fa-solid fa-arrows-rotate"></i></span>
+                            <span>Sync GHN</span>
+                        </button>
+                    </form>
+                }
+                <a class="top-dropdown-item" href="/Account/ChangePassword">
+                    <span class="menu-icon sub"><i class="fa-solid fa-key"></i></span>
+                    <span>Đổi mật khẩu</span>
+                </a>
+                <a class="top-dropdown-item" href="/Account/Logout">
+                    <span class="menu-icon sub"><i class="fa-solid fa-right-from-bracket"></i></span>
+                    <span>Đăng xuất</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="app-main">
+    @if (TempData["Message"] is string msg)
+    {
+        <div class="alert alert-success">@msg</div>
+    }
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <nav aria-label="breadcrumb" class="breadcrumb-box mb-3">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="/Dashboard/Index">Trang chủ</a></li>
+                @if (!string.IsNullOrWhiteSpace(breadcrumbParent))
+                {
+                    if (!string.IsNullOrWhiteSpace(breadcrumbParentUrl))
+                    {
+                        <li class="breadcrumb-item"><a href="@breadcrumbParentUrl">@breadcrumbParent</a></li>
+                    }
+                    else
+                    {
+                        <li class="breadcrumb-item">@breadcrumbParent</li>
+                    }
+                }
+                @if (!string.Equals(currentController, "Dashboard", StringComparison.OrdinalIgnoreCase) || !string.Equals(currentAction, "Index", StringComparison.OrdinalIgnoreCase))
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@breadcrumbTitle</li>
+                }
+            </ol>
+        </nav>
+    }
+
+    <section class="page-shell content-frame">
+        @RenderBody()
+    </section>
+</main>
+
+<footer class="app-footer">
+    <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>© @DateTime.Now.Year CLEAN TOPIA CRM</div>
+        <div>77 Tạ Hiện, Phường Cát Lái, TP Hồ Chí Minh | Hotline: 090 769 1010</div>
+    </div>
+</footer>
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

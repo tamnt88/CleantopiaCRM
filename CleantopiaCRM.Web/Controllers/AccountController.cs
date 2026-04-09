@@ -11,11 +11,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CleantopiaCRM.Web.Controllers;
 
-[AllowAnonymous]
 public class AccountController(AppDbContext db) : Controller
 {
+    [AllowAnonymous]
     public IActionResult Login() => View(new LoginViewModel());
 
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Login(LoginViewModel vm)
     {
@@ -54,6 +55,36 @@ public class AccountController(AppDbContext db) : Controller
 
         var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
+        return RedirectToAction("Index", "Dashboard");
+    }
+
+    [Authorize]
+    public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
+
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel vm)
+    {
+        if (!ModelState.IsValid) return View(vm);
+
+        var username = User.FindFirstValue(ClaimTypes.Name);
+        if (string.IsNullOrWhiteSpace(username))
+            return RedirectToAction(nameof(Login));
+
+        var user = await db.AppUsers.FirstOrDefaultAsync(x => x.Username == username && x.IsActive);
+        if (user is null)
+            return RedirectToAction(nameof(Login));
+
+        var currentHash = PasswordHasher.Hash(vm.CurrentPassword);
+        if (!string.Equals(user.PasswordHash, currentHash, StringComparison.Ordinal))
+        {
+            ModelState.AddModelError(string.Empty, "Mật khẩu hiện tại không đúng.");
+            return View(vm);
+        }
+
+        user.PasswordHash = PasswordHasher.Hash(vm.NewPassword);
+        await db.SaveChangesAsync();
+        TempData["Message"] = "Đổi mật khẩu thành công.";
         return RedirectToAction("Index", "Dashboard");
     }
 

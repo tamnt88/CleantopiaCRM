@@ -1,8 +1,138 @@
-@model CleantopiaCRM.Web.ViewModels.DashboardVm
-@{ ViewData["Title"] = "Dashboard"; }
-<div class="row g-3">
-    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Khach hang</div><h3>@Model.CustomerCount</h3></div></div></div>
-    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Lich hen hom nay</div><h3>@Model.AppointmentToday</h3></div></div></div>
-    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Doanh thu</div><h3>@Model.Revenue.ToString("N0")</h3></div></div></div>
-    <div class="col-md-3"><div class="card card-kpi"><div class="card-body"><div>Nhac lich sap toi</div><h3>@Model.PendingReminders</h3></div></div></div>
+﻿@model CleantopiaCRM.Web.ViewModels.DashboardVm
+@{
+    ViewData["Title"] = "Dashboard";
+    var srcMax = Model.CustomerBySource.Any() ? Model.CustomerBySource.Max(x => x.Count) : 1;
+    var top10 = Model.TopServices.Take(10).ToList();
+    var qtyMax = top10.Any() ? top10.Max(x => x.Quantity) : 1;
+}
+
+<div class="dash-wrap">
+    <div class="dash-header">Tổng quan khách hàng 360</div>
+
+    <div class="dash-kpi-grid">
+        <div class="dash-kpi kpi-1">
+            <div class="kpi-title">Tổng khách hàng</div>
+            <div class="kpi-value">@Model.CustomerCount</div>
+        </div>
+        <div class="dash-kpi kpi-2">
+            <div class="kpi-title">Khách hàng tạo mới</div>
+            <div class="kpi-value">@Model.NewCustomersThisMonth</div>
+        </div>
+        <div class="dash-kpi kpi-3">
+            <div class="kpi-title">Khách hàng mua hàng</div>
+            <div class="kpi-value">@(Model.FirstPurchaseCustomersThisMonth + Model.ReturningCustomersThisMonth)</div>
+        </div>
+        <div class="dash-kpi kpi-4">
+            <div class="kpi-title">KH mua lần đầu</div>
+            <div class="kpi-value">@Model.FirstPurchaseCustomersThisMonth <span>@Model.FirstPurchaseRate%</span></div>
+        </div>
+        <div class="dash-kpi kpi-5">
+            <div class="kpi-title">Khách hàng mua lại</div>
+            <div class="kpi-value">@Model.ReturningCustomersThisMonth <span>@Model.ReturningRate%</span></div>
+        </div>
+    </div>
+
+    <div class="dash-panels">
+        <section class="dash-panel">
+            <div class="panel-title">Tăng trưởng khách hàng tạo mới</div>
+            <div class="panel-main">@Model.NewCustomersThisMonth</div>
+            <div class="fake-chart bars-12">
+                @for (var i = 0; i < 12; i++)
+                {
+                    var h = 30 + (i * 5 + Model.NewCustomersThisMonth) % 70;
+                    <div class="bar" style="height:@h%"></div>
+                }
+            </div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="panel-title">Top dịch vụ dùng nhiều</div>
+            <div class="panel-main">@Model.TopServices.Count</div>
+            <div class="fake-chart bars-12">
+                @if (top10.Count == 0)
+                {
+                    @for (var i = 0; i < 10; i++)
+                    {
+                        <div class="bar" style="height:12%"></div>
+                    }
+                }
+                else
+                {
+                    foreach (var s in top10)
+                    {
+                        var h = Math.Max(10m, Math.Round((s.Quantity * 100m) / qtyMax, 0));
+                        <div class="bar" style="height:@h%" title="@s.ServiceName"></div>
+                    }
+                }
+            </div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="panel-title">Doanh số theo nguồn khách hàng</div>
+            <div class="panel-main">@Model.CustomerBySource.Sum(x => x.Count)</div>
+            <div class="h-bars">
+                @if (!Model.CustomerBySource.Any())
+                {
+                    <div class="empty">Chưa có dữ liệu</div>
+                }
+                else
+                {
+                    foreach (var s in Model.CustomerBySource.Take(5))
+                    {
+                        var w = Math.Max(8, (int)Math.Round((double)s.Count * 100 / srcMax));
+                        <div class="h-row">
+                            <span>@s.Source</span>
+                            <div class="h-track"><div class="h-fill" style="width:@w%"></div></div>
+                            <b>@s.Count</b>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="panel-title">Số lượng KH theo nguồn gốc</div>
+            <div class="panel-main">@Model.CustomerBySource.Sum(x => x.Count)</div>
+            <div class="mini-list">
+                @foreach (var s in Model.CustomerBySource.Take(5))
+                {
+                    <div class="mini-item"><span>@s.Source</span><b>@s.Count</b></div>
+                }
+            </div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="panel-title">Số lượng KH theo loại khách hàng</div>
+            <div class="panel-main">@Model.CustomerCount</div>
+            <div class="h-bars">
+                @if (!Model.TopServices.Any())
+                {
+                    <div class="empty">Chưa có dữ liệu</div>
+                }
+                else
+                {
+                    foreach (var s in top10.Take(5))
+                    {
+                        var w = Math.Max(8, (int)Math.Round((double)s.Quantity * 100 / (double)qtyMax));
+                        <div class="h-row">
+                            <span>@s.ServiceName</span>
+                            <div class="h-track"><div class="h-fill alt" style="width:@w%"></div></div>
+                            <b>@s.Quantity.ToString("N0")</b>
+                        </div>
+                    }
+                }
+            </div>
+        </section>
+
+        <section class="dash-panel">
+            <div class="panel-title">Khách hàng sinh nhật</div>
+            <div class="panel-main">@Model.CustomerBySource.Count</div>
+            <div class="mini-list">
+                @foreach (var s in Model.CustomerBySource.Take(5))
+                {
+                    <div class="mini-item"><span>@s.Source</span><span class="text-muted">Liên hệ chăm sóc</span></div>
+                }
+            </div>
+        </section>
+    </div>
 </div>

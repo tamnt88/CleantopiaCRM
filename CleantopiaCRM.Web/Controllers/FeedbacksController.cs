@@ -10,12 +10,21 @@ namespace CleantopiaCRM.Web.Controllers;
 [Authorize(Roles = "Admin,DieuPhoi,GiamSat")]
 public class FeedbacksController(AppDbContext db) : Controller
 {
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(string? q, int? customerId, int? rating, DateTime? fromDate, DateTime? toDate, int page = 1, int pageSize = 10)
     {
         var query = db.ServiceFeedbacks.Include(x => x.Customer).AsQueryable();
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Customer!.Name.Contains(q) || (x.Content ?? "").Contains(q));
+        if (customerId.HasValue) query = query.Where(x => x.CustomerId == customerId.Value);
+        if (rating.HasValue) query = query.Where(x => x.Rating == rating.Value);
+        if (fromDate.HasValue) query = query.Where(x => x.CreatedAt.Date >= fromDate.Value.Date);
+        if (toDate.HasValue) query = query.Where(x => x.CreatedAt.Date <= toDate.Value.Date);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(x => x.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        ViewBag.CustomerId = customerId;
+        ViewBag.Rating = rating;
+        ViewBag.FromDate = fromDate;
+        ViewBag.ToDate = toDate;
+        ViewBag.Customers = await db.Customers.OrderBy(x => x.Name).ToListAsync();
         return View(new PagedResult<ServiceFeedback> { Items = items, Page = page, PageSize = pageSize, TotalItems = total, Query = q });
     }
 

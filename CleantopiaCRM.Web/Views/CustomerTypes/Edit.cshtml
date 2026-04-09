@@ -1,0 +1,10 @@
+﻿@model CleantopiaCRM.Web.Entities.CustomerType
+@{ ViewData["Title"] = "Sửa loại khách"; }
+<h4>Sửa loại khách</h4>
+<form method="post" class="row g-2">
+  <div class="col-md-6"><input asp-for="Name" class="form-control" placeholder="Tên loại khách" /></div>
+  <div class="col-md-2"><input asp-for="SortOrder" class="form-control" placeholder="Thứ tự" /></div>
+  <div class="col-md-2 form-check d-flex align-items-center px-4"><input asp-for="IsBusiness" class="form-check-input" /><label class="form-check-label ms-2">Loại doanh nghiệp</label></div>
+  <div class="col-md-2 form-check d-flex align-items-center px-4"><input asp-for="IsActive" class="form-check-input" /><label class="form-check-label ms-2">Áp dụng</label></div>
+  <div class="col-12"><button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu</button> <a href="/CustomerTypes" class="btn btn-outline-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a></div>
+</form>

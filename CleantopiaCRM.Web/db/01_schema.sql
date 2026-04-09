@@ -1,3 +1,18 @@
+﻿/*
+CAO NHAT:
+- File nay co tinh chat DESTRUCTIVE (drop/recreate tables).
+- Mac dinh bi KHOA de tranh xoa du lieu ngoai y muon.
+- Chi bat khi can khoi tao moi hoan toan DB.
+*/
+DECLARE @AllowDestructiveRebuild BIT = 0; -- DOI THANH 1 neu ban CHAC CHAN muon xoa toan bo du lieu
+
+IF @AllowDestructiveRebuild = 0
+BEGIN
+    RAISERROR(N'01_schema.sql dang o safe mode. Khong thuc thi DROP TABLE. Neu can rebuild trang, dat @AllowDestructiveRebuild = 1.', 16, 1);
+    RETURN;
+END
+GO
+
 IF DB_ID('CleantopiaCRM') IS NULL
     CREATE DATABASE CleantopiaCRM;
 GO
@@ -7,12 +22,17 @@ GO
 IF OBJECT_ID('dbo.Assignments','U') IS NOT NULL DROP TABLE dbo.Assignments;
 IF OBJECT_ID('dbo.ServiceFeedbacks','U') IS NOT NULL DROP TABLE dbo.ServiceFeedbacks;
 IF OBJECT_ID('dbo.MaintenanceReminders','U') IS NOT NULL DROP TABLE dbo.MaintenanceReminders;
+IF OBJECT_ID('dbo.RoleMenus','U') IS NOT NULL DROP TABLE dbo.RoleMenus;
+IF OBJECT_ID('dbo.MenuItems','U') IS NOT NULL DROP TABLE dbo.MenuItems;
 IF OBJECT_ID('dbo.QuoteItems','U') IS NOT NULL DROP TABLE dbo.QuoteItems;
 IF OBJECT_ID('dbo.Quotes','U') IS NOT NULL DROP TABLE dbo.Quotes;
 IF OBJECT_ID('dbo.Appointments','U') IS NOT NULL DROP TABLE dbo.Appointments;
 IF OBJECT_ID('dbo.AppUsers','U') IS NOT NULL DROP TABLE dbo.AppUsers;
 IF OBJECT_ID('dbo.Employees','U') IS NOT NULL DROP TABLE dbo.Employees;
+IF OBJECT_ID('dbo.CustomerServiceAddresses','U') IS NOT NULL DROP TABLE dbo.CustomerServiceAddresses;
 IF OBJECT_ID('dbo.Customers','U') IS NOT NULL DROP TABLE dbo.Customers;
+IF OBJECT_ID('dbo.CustomerTypes','U') IS NOT NULL DROP TABLE dbo.CustomerTypes;
+IF OBJECT_ID('dbo.CustomerSources','U') IS NOT NULL DROP TABLE dbo.CustomerSources;
 IF OBJECT_ID('dbo.ServicePrices','U') IS NOT NULL DROP TABLE dbo.ServicePrices;
 IF OBJECT_ID('dbo.Addresses','U') IS NOT NULL DROP TABLE dbo.Addresses;
 IF OBJECT_ID('dbo.GhnWards','U') IS NOT NULL DROP TABLE dbo.GhnWards;
@@ -25,6 +45,44 @@ CREATE TABLE dbo.Countries (
     Code NVARCHAR(10) NOT NULL,
     Name NVARCHAR(250) NOT NULL,
     CONSTRAINT UQ_Countries_Code UNIQUE(Code)
+);
+
+CREATE TABLE dbo.CustomerSources (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    SortOrder INT NOT NULL DEFAULT 0,
+    CONSTRAINT UQ_CustomerSources_Name UNIQUE(Name)
+);
+
+CREATE TABLE dbo.CustomerTypes (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Name NVARCHAR(100) NOT NULL,
+    IsBusiness BIT NOT NULL DEFAULT 0,
+    IsActive BIT NOT NULL DEFAULT 1,
+    SortOrder INT NOT NULL DEFAULT 0,
+    CONSTRAINT UQ_CustomerTypes_Name UNIQUE(Name)
+);
+
+CREATE TABLE dbo.MenuItems (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Code NVARCHAR(100) NOT NULL,
+    Title NVARCHAR(250) NOT NULL,
+    Url NVARCHAR(300) NULL,
+    IconCss NVARCHAR(100) NULL,
+    ParentId INT NULL,
+    SortOrder INT NOT NULL DEFAULT 0,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CONSTRAINT UQ_MenuItems_Code UNIQUE(Code),
+    CONSTRAINT FK_MenuItems_Parent FOREIGN KEY (ParentId) REFERENCES dbo.MenuItems(Id)
+);
+
+CREATE TABLE dbo.RoleMenus (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    RoleName NVARCHAR(50) NOT NULL,
+    MenuItemId INT NOT NULL,
+    CONSTRAINT FK_RoleMenus_MenuItems FOREIGN KEY (MenuItemId) REFERENCES dbo.MenuItems(Id),
+    CONSTRAINT UQ_RoleMenus UNIQUE(RoleName, MenuItemId)
 );
 
 CREATE TABLE dbo.GhnProvinces (
@@ -64,11 +122,41 @@ CREATE TABLE dbo.Customers (
     Phone NVARCHAR(20) NULL,
     Email NVARCHAR(250) NULL,
     CountryId INT NOT NULL,
-    AddressId INT NOT NULL,
+    CustomerSourceId INT NULL,
+    CustomerTypeId INT NULL,
+    IsBusiness BIT NOT NULL DEFAULT 0,
+    CompanyName NVARCHAR(250) NULL,
+    TaxCode NVARCHAR(50) NULL,
+    BillingAddress NVARCHAR(500) NULL,
+    BillingEmail NVARCHAR(250) NULL,
+    BillingPhone NVARCHAR(20) NULL,
+    BillingReceiver NVARCHAR(250) NULL,
     Notes NVARCHAR(MAX) NULL,
     CreatedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
     CONSTRAINT FK_Customers_Countries FOREIGN KEY (CountryId) REFERENCES dbo.Countries(Id),
-    CONSTRAINT FK_Customers_Addresses FOREIGN KEY (AddressId) REFERENCES dbo.Addresses(Id)
+    CONSTRAINT FK_Customers_CustomerSources FOREIGN KEY (CustomerSourceId) REFERENCES dbo.CustomerSources(Id),
+    CONSTRAINT FK_Customers_CustomerTypes FOREIGN KEY (CustomerTypeId) REFERENCES dbo.CustomerTypes(Id)
+);
+
+CREATE TABLE dbo.CustomerServiceAddresses (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    CustomerId INT NOT NULL,
+    AddressId INT NOT NULL,
+    ContactName NVARCHAR(250) NOT NULL,
+    ContactPhone NVARCHAR(20) NULL,
+    ContactEmail NVARCHAR(250) NULL,
+    SiteName NVARCHAR(250) NULL,
+    IsDefault BIT NOT NULL DEFAULT 0,
+    HasOwnInvoiceInfo BIT NOT NULL DEFAULT 0,
+    InvoiceCompanyName NVARCHAR(250) NULL,
+    InvoiceTaxCode NVARCHAR(50) NULL,
+    InvoiceAddress NVARCHAR(500) NULL,
+    InvoiceEmail NVARCHAR(250) NULL,
+    InvoicePhone NVARCHAR(20) NULL,
+    InvoiceReceiver NVARCHAR(250) NULL,
+    IsActive BIT NOT NULL DEFAULT 1,
+    CONSTRAINT FK_CustomerServiceAddresses_Customers FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(Id),
+    CONSTRAINT FK_CustomerServiceAddresses_Addresses FOREIGN KEY (AddressId) REFERENCES dbo.Addresses(Id)
 );
 
 CREATE TABLE dbo.Employees (
@@ -173,6 +261,9 @@ CREATE TABLE dbo.MaintenanceReminders (
 GO
 
 CREATE INDEX IX_Customers_Name ON dbo.Customers(Name);
+CREATE INDEX IX_Customers_Source ON dbo.Customers(CustomerSourceId);
+CREATE INDEX IX_Customers_Type ON dbo.Customers(CustomerTypeId);
+CREATE INDEX IX_CustomerServiceAddresses_Customer ON dbo.CustomerServiceAddresses(CustomerId);
 CREATE INDEX IX_Employees_FullName ON dbo.Employees(FullName);
 CREATE INDEX IX_Quotes_QuoteDate ON dbo.Quotes(QuoteDate);
 CREATE INDEX IX_Appointments_ScheduledAt ON dbo.Appointments(ScheduledAt);

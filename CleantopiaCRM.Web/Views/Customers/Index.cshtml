@@ -1,6 +1,59 @@
-@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Customer>
-<h4>Kh�ch h�ng <a href="/Customers/Create" class="btn btn-sm btn-brand">Th�m</a></h4>
-<form class="row g-2 mb-3"><div class="col-md-4"><input name="q" value="@Model.Query" class="form-control" placeholder="T�m theo t�n/sdt" /></div><div class="col-md-2"><button class="btn btn-outline-primary">T�m</button></div></form>
-<table class="table table-striped"><tr><th>T�n</th><th>Qu?c gia</th><th>�?a ch?</th><th>S�T</th><th></th></tr>
-@foreach (var x in Model.Items){<tr><td>@x.Name</td><td>@x.Country?.Name</td><td>@x.Address?.FullText</td><td>@x.Phone</td><td><a href="/Customers/Edit/@x.Id" class="btn btn-sm btn-outline-primary">S?a</a> <form method="post" action="/Customers/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger">X�a</button></form></td></tr>}
-</table>
+﻿@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Customer>
+@{
+    ViewData["Title"] = "Khách hàng";
+    var countries = ViewBag.Countries as List<CleantopiaCRM.Web.Entities.Country> ?? new();
+    var sources = ViewBag.Sources as List<CleantopiaCRM.Web.Entities.CustomerSource> ?? new();
+    var types = ViewBag.Types as List<CleantopiaCRM.Web.Entities.CustomerType> ?? new();
+    var route = new Dictionary<string, string?>();
+    foreach (var key in Context.Request.Query.Keys)
+    {
+        if (!string.Equals(key, "page", StringComparison.OrdinalIgnoreCase)) route[key] = Context.Request.Query[key].ToString();
+    }
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Khách hàng</h4>
+    <a href="/Customers/Create" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Thêm</a>
+</div>
+<form method="get" class="card card-body mb-3">
+    <div class="row g-2">
+        <div class="col-md-3"><input name="q" value="@Model.Query" class="form-control" placeholder="Tên / SĐT / Email" /></div>
+        <div class="col-md-3"><select name="sourceId" class="form-select"><option value="">-- Nguồn khách --</option>@foreach (var s in sources){<option value="@s.Id" selected="@(s.Id == (int?)ViewBag.SourceId)">@s.Name</option>}</select></div>
+        <div class="col-md-3"><select name="typeId" class="form-select"><option value="">-- Loại khách --</option>@foreach (var t in types){<option value="@t.Id" selected="@(t.Id == (int?)ViewBag.TypeId)">@t.Name</option>}</select></div>
+        <div class="col-md-2"><select name="countryId" class="form-select"><option value="">-- Quốc gia --</option>@foreach (var c in countries){<option value="@c.Id" selected="@(c.Id == (int?)ViewBag.CountryId)">@c.Name</option>}</select></div>
+        <div class="col-md-1 d-flex gap-2"><button class="btn btn-primary w-100"><i class="fa-solid fa-filter"></i></button></div>
+    </div>
+</form>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered align-middle">
+        <thead class="table-light"><tr><th>Tên</th><th>Nguồn</th><th>Loại khách</th><th>Quốc gia</th><th>Địa điểm DV</th><th>SĐT</th><th style="width:240px">Thao tác</th></tr></thead>
+        <tbody>
+        @foreach (var x in Model.Items)
+        {
+            var defaultAddress = x.ServiceAddresses.OrderByDescending(a => a.IsDefault).ThenBy(a => a.Id).FirstOrDefault();
+            <tr>
+                <td>
+                    @x.Name
+                    @if (x.IsBusiness)
+                    {
+                        <span class="badge text-bg-warning ms-1">Doanh nghiệp</span>
+                    }
+                </td>
+                <td>@x.CustomerSource?.Name</td>
+                <td>@x.CustomerType?.Name</td>
+                <td>@x.Country?.Name</td>
+                <td>@(defaultAddress?.Address?.FullText ?? "-")</td>
+                <td>@x.Phone</td>
+                <td>
+                    <a href="/Customers/Edit/@x.Id" class="btn btn-sm btn-outline-primary" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></a>
+                    <a href="/CustomerServiceAddresses?customerId=@x.Id" class="btn btn-sm btn-outline-info" title="Địa chỉ dịch vụ"><i class="fa-solid fa-map-location-dot"></i></a>
+                    <form method="post" action="/Customers/Delete/@x.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa khách hàng?')"><i class="fa-solid fa-trash"></i></button></form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+@if (Model.TotalPages > 1)
+{
+    <nav><ul class="pagination">@for (var i = 1; i <= Model.TotalPages; i++){<li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-all-route-data="route" asp-route-page="@i">@i</a></li>}</ul></nav>
+}

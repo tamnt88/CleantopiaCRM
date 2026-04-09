@@ -8,6 +8,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Country> Countries => Set<Country>();
+    public DbSet<CustomerSource> CustomerSources => Set<CustomerSource>();
+    public DbSet<CustomerType> CustomerTypes => Set<CustomerType>();
+    public DbSet<CustomerServiceAddress> CustomerServiceAddresses => Set<CustomerServiceAddress>();
+    public DbSet<MenuItem> MenuItems => Set<MenuItem>();
+    public DbSet<RoleMenu> RoleMenus => Set<RoleMenu>();
     public DbSet<GhnProvince> GhnProvinces => Set<GhnProvince>();
     public DbSet<GhnWard> GhnWards => Set<GhnWard>();
     public DbSet<Address> Addresses => Set<Address>();
@@ -26,5 +31,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<GhnProvince>().HasIndex(x => x.ProvinceId).IsUnique();
         modelBuilder.Entity<GhnWard>().HasIndex(x => x.WardIdV2).IsUnique();
         modelBuilder.Entity<GhnWard>().HasIndex(x => x.WardCode);
+        modelBuilder.Entity<MenuItem>().HasIndex(x => x.Code).IsUnique();
+        modelBuilder.Entity<RoleMenu>().HasIndex(x => new { x.RoleName, x.MenuItemId }).IsUnique();
+        modelBuilder.Entity<CustomerSource>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<CustomerType>().HasIndex(x => x.Name).IsUnique();
     }
 }

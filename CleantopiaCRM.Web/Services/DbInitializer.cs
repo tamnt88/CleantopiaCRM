@@ -32,6 +32,24 @@ public static class DbInitializer
             );
         }
 
+        if (!await db.CustomerSources.AnyAsync())
+        {
+            db.CustomerSources.AddRange(
+                new CustomerSource { Name = "Trực tiếp", SortOrder = 10, IsActive = true },
+                new CustomerSource { Name = "Website", SortOrder = 20, IsActive = true },
+                new CustomerSource { Name = "Facebook", SortOrder = 30, IsActive = true },
+                new CustomerSource { Name = "Zalo", SortOrder = 40, IsActive = true }
+            );
+        }
+
+        if (!await db.CustomerTypes.AnyAsync())
+        {
+            db.CustomerTypes.AddRange(
+                new CustomerType { Name = "Cá nhân", IsBusiness = false, SortOrder = 10, IsActive = true },
+                new CustomerType { Name = "Doanh nghiệp", IsBusiness = true, SortOrder = 20, IsActive = true }
+            );
+        }
+
         await db.SaveChangesAsync();
     }
 }
