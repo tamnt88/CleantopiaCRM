@@ -4,12 +4,8 @@
     ViewData["BreadcrumbParent"] = "Khách hàng";
     ViewData["BreadcrumbParentUrl"] = "/Customers";
     var countries = (IEnumerable<CleantopiaCRM.Web.Entities.Country>)ViewBag.Countries;
-    var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
-    var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
     var sources = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerSource>)ViewBag.Sources;
     var types = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerType>)ViewBag.Types;
-    var selectedProvinceId = (int?)ViewBag.ProvinceId;
-    var selectedWardId = (int?)ViewBag.WardId;
     var isModal = (bool?)ViewBag.IsModal == true;
 }
 <link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
@@ -98,16 +94,16 @@
                 <input asp-for="Name" class="form-control" placeholder="Tên khách hàng" required data-msg-required="Vui lòng nhập tên khách hàng." />
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-4">
                 <label asp-for="Phone" class="form-label mb-1">Số điện thoại</label>
                 <input asp-for="Phone" class="form-control" placeholder="SĐT" required data-msg-required="Vui lòng nhập số điện thoại." />
                 <span asp-validation-for="Phone" class="text-danger"></span>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label asp-for="Email" class="form-label mb-1">Email</label>
                 <input asp-for="Email" class="form-control" placeholder="Email" />
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label asp-for="CountryId" class="form-label mb-1">Quốc gia</label>
                 <select asp-for="CountryId" class="form-select js-select2" required data-msg-required="Vui lòng chọn quốc gia.">
                     @foreach(var c in countries){<option value="@c.Id">@c.Name</option>}
@@ -131,99 +127,9 @@
                 </select>
                 <span asp-validation-for="CustomerTypeId" class="text-danger"></span>
             </div>
-            <div class="col-md-4">
-                <label class="form-label mb-1 d-block">&nbsp;</label>
-                <div class="form-check d-flex align-items-center">
-                    <input asp-for="IsBusiness" class="form-check-input" id="isBusiness" />
-                    <label class="form-check-label ms-2" for="isBusiness">Khách doanh nghiệp</label>
-                </div>
-            </div>
-
             <div class="col-12">
                 <label asp-for="Notes" class="form-label mb-1">Ghi chú</label>
                 <textarea asp-for="Notes" class="form-control" placeholder="Ghi chú"></textarea>
-            </div>
-        </div>
-    </div>
-
-    <div id="invoiceBlock" class="form-section">
-        <div class="form-section-title"><i class="fa-solid fa-file-invoice"></i> Thông tin xuất hóa đơn (khách doanh nghiệp)</div>
-        <div class="row g-2">
-            <div class="col-md-4">
-                <label asp-for="CompanyName" class="form-label mb-1">Tên công ty</label>
-                <input asp-for="CompanyName" class="form-control" placeholder="Tên công ty" />
-                <span asp-validation-for="CompanyName" class="text-danger"></span>
-            </div>
-            <div class="col-md-2">
-                <label asp-for="TaxCode" class="form-label mb-1">Mã số thuế</label>
-                <input asp-for="TaxCode" class="form-control" placeholder="Mã số thuế" />
-                <span asp-validation-for="TaxCode" class="text-danger"></span>
-            </div>
-            <div class="col-md-6">
-                <label asp-for="BillingAddress" class="form-label mb-1">Địa chỉ xuất hóa đơn</label>
-                <input asp-for="BillingAddress" class="form-control" placeholder="Địa chỉ xuất hóa đơn" />
-                <span asp-validation-for="BillingAddress" class="text-danger"></span>
-            </div>
-            <div class="col-md-4">
-                <label asp-for="BillingEmail" class="form-label mb-1">Email nhận hóa đơn</label>
-                <input asp-for="BillingEmail" class="form-control" placeholder="Email nhận hóa đơn" />
-            </div>
-            <div class="col-md-3">
-                <label asp-for="BillingPhone" class="form-label mb-1">SĐT hóa đơn</label>
-                <input asp-for="BillingPhone" class="form-control" placeholder="SĐT hóa đơn" />
-            </div>
-            <div class="col-md-5">
-                <label asp-for="BillingReceiver" class="form-label mb-1">Người nhận hóa đơn</label>
-                <input asp-for="BillingReceiver" class="form-control" placeholder="Người nhận hóa đơn" />
-            </div>
-        </div>
-    </div>
-
-    <div class="form-section">
-        <div class="form-section-title"><i class="fa-solid fa-location-dot"></i> Địa chỉ dịch vụ mặc định và người liên hệ</div>
-        <div class="row g-2">
-            <div class="col-md-2">
-                <label class="form-label mb-1">Số nhà</label>
-                <input class="form-control" name="houseNumber" placeholder="Số nhà" value="@ViewBag.HouseNumber" required data-msg-required="Vui lòng nhập số nhà." />
-                @Html.ValidationMessage("houseNumber", null, new { @class = "text-danger" })
-            </div>
-            <div class="col-md-3">
-                <label class="form-label mb-1">Tên đường</label>
-                <input class="form-control" name="street" placeholder="Tên đường" value="@ViewBag.Street" required data-msg-required="Vui lòng nhập tên đường." />
-                @Html.ValidationMessage("street", null, new { @class = "text-danger" })
-            </div>
-            <div class="col-md-3">
-                <label class="form-label mb-1">Tỉnh/Thành</label>
-                <select class="form-select js-select2" id="provinceId" name="provinceId" required data-msg-required="Vui lòng chọn tỉnh/thành.">
-                    @foreach(var p in provinces){<option value="@p.Id" selected="@(selectedProvinceId == p.Id)">@p.ProvinceName</option>}
-                </select>
-                @Html.ValidationMessage("provinceId", null, new { @class = "text-danger" })
-            </div>
-            <div class="col-md-4">
-                <label class="form-label mb-1">Phường/Xã</label>
-                <select class="form-select js-select2" id="wardId" name="wardId" required data-msg-required="Vui lòng chọn phường/xã.">
-                    @foreach(var w in wards){<option value="@w.Id" selected="@(selectedWardId == w.Id)">@w.WardName</option>}
-                </select>
-                @Html.ValidationMessage("wardId", null, new { @class = "text-danger" })
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label mb-1">Tên địa điểm</label>
-                <input class="form-control" name="siteName" placeholder="Tên địa điểm (VD: Trụ sở, Chi nhánh 1)" value="@ViewBag.SiteName" />
-            </div>
-            <div class="col-md-4">
-                <label class="form-label mb-1">Người liên hệ</label>
-                <input class="form-control" name="contactName" placeholder="Người liên hệ" value="@ViewBag.ContactName" required data-msg-required="Vui lòng nhập người liên hệ." />
-                @Html.ValidationMessage("contactName", null, new { @class = "text-danger" })
-            </div>
-            <div class="col-md-2">
-                <label class="form-label mb-1">SĐT liên hệ</label>
-                <input class="form-control" name="contactPhone" placeholder="SĐT liên hệ" value="@ViewBag.ContactPhone" required data-msg-required="Vui lòng nhập số điện thoại liên hệ." />
-                @Html.ValidationMessage("contactPhone", null, new { @class = "text-danger" })
-            </div>
-            <div class="col-md-2">
-                <label class="form-label mb-1">Email liên hệ</label>
-                <input class="form-control" name="contactEmail" placeholder="Email liên hệ" value="@ViewBag.ContactEmail" />
             </div>
         </div>
     </div>
@@ -248,30 +154,6 @@
 <script src="~/lib/jquery-validation/dist/localization/messages_vi.min.js"></script>
 <script>
 (function(){
-  const province = document.getElementById('provinceId');
-  const ward = document.getElementById('wardId');
-  const isBusiness = document.getElementById('isBusiness');
-  const customerType = document.getElementById('customerTypeId');
-  const invoiceBlock = document.getElementById('invoiceBlock');
-
-  async function loadWards(){
-    const res = await fetch(`/api/address/wards?provinceId=${province.value}`);
-    const data = await res.json();
-    ward.innerHTML = data.map(x => `<option value="${x.id}">${x.wardName}</option>`).join('');
-    $('#wardId').trigger('change.select2');
-  }
-
-  function syncBusinessByType(){
-    const opt = customerType.options[customerType.selectedIndex];
-    if (!opt) return;
-    if (opt.dataset.business === 'true') isBusiness.checked = true;
-    toggleInvoice();
-  }
-
-  function toggleInvoice(){
-    invoiceBlock.style.display = isBusiness.checked ? 'block' : 'none';
-  }
-
   $('.js-select2').select2({
     width: '100%'
   });
@@ -340,13 +222,6 @@
     }
   }
 
-  province.addEventListener('change', loadWards);
-  customerType.addEventListener('change', syncBusinessByType);
-  isBusiness.addEventListener('change', function(){
-    toggleInvoice();
-    setTimeout(notifyModalResize, 50);
-  });
-  toggleInvoice();
   setTimeout(notifyModalResize, 50);
   window.addEventListener('resize', notifyModalResize);
 })();

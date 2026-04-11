@@ -9,6 +9,156 @@ public static class DbInitializer
     public static async Task EnsureServicePricingSchemaAsync(AppDbContext db)
     {
         await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'DiscountAmount') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD DiscountAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Quotes_DiscountAmount DEFAULT(0);
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ServiceAddressId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ServiceAddressId INT NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ServiceAddressText') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ServiceAddressText NVARCHAR(1000) NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ContactName') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ContactName NVARCHAR(250) NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ContactPhone') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ContactPhone NVARCHAR(20) NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ServiceProvinceId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ServiceProvinceId INT NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'ServiceWardId') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD ServiceWardId INT NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'HasVatInvoice') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD HasVatInvoice BIT NOT NULL CONSTRAINT DF_Quotes_HasVatInvoice DEFAULT(0);
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'InvoiceCompanyName') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD InvoiceCompanyName NVARCHAR(250) NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'InvoiceTaxCode') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD InvoiceTaxCode NVARCHAR(50) NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'InvoiceAddress') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD InvoiceAddress NVARCHAR(500) NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'InvoiceEmail') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD InvoiceEmail NVARCHAR(250) NULL;
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'InvoiceReceiver') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD InvoiceReceiver NVARCHAR(250) NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'VatRate') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD VatRate DECIMAL(5,2) NOT NULL CONSTRAINT DF_Quotes_VatRate DEFAULT(8);
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'SubtotalAmount') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD SubtotalAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Quotes_SubtotalAmount DEFAULT(0);
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'VatAmount') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD VatAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Quotes_VatAmount DEFAULT(0);
+END
+""");
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Quotes', N'TotalAmount') IS NULL
+BEGIN
+    ALTER TABLE dbo.Quotes ADD TotalAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_Quotes_TotalAmount DEFAULT(0);
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.QuoteItems', N'DiscountAmount') IS NULL
+BEGIN
+    ALTER TABLE dbo.QuoteItems ADD DiscountAmount DECIMAL(18,2) NOT NULL CONSTRAINT DF_QuoteItems_DiscountAmount DEFAULT(0);
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.QuoteItems', N'Note') IS NULL
+BEGIN
+    ALTER TABLE dbo.QuoteItems ADD Note NVARCHAR(500) NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF COL_LENGTH(N'dbo.Customers', N'CustomerCode') IS NULL
+BEGIN
+    ALTER TABLE dbo.Customers ADD CustomerCode NVARCHAR(30) NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+UPDATE c
+SET c.CustomerCode = CONCAT('KH-', RIGHT(CONCAT('00000', CAST(c.Id AS VARCHAR(20))), 5))
+FROM dbo.Customers c
+WHERE c.CustomerCode IS NULL OR LTRIM(RTRIM(c.CustomerCode)) = '';
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Customers_CustomerCode'
+      AND object_id = OBJECT_ID(N'dbo.Customers')
+)
+BEGIN
+    CREATE UNIQUE INDEX IX_Customers_CustomerCode
+        ON dbo.Customers(CustomerCode)
+        WHERE CustomerCode IS NOT NULL;
+END
+""");
+
+        await db.Database.ExecuteSqlRawAsync("""
 IF OBJECT_ID(N'dbo.ServiceCategories', N'U') IS NULL
 BEGIN
     CREATE TABLE [dbo].[ServiceCategories](

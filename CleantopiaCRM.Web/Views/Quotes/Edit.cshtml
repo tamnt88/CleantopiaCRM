@@ -1,13 +1,237 @@
-﻿@model CleantopiaCRM.Web.Entities.Quote
-@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; var services = (IEnumerable<CleantopiaCRM.Web.Entities.ServicePrice>)ViewBag.Services; }
-<h4>Tao bao gia</h4>
-<form method="post" class="row g-2">
-<div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div>
-<div class="col-md-3"><input type="date" class="form-control" name="QuoteDate" value="@Model.QuoteDate.ToString("yyyy-MM-dd")" /></div>
-<div class="col-md-3"><input type="date" class="form-control" name="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" /></div>
-<div class="col-md-8"><select class="form-select" name="servicePriceId">@foreach(var s in services){<option value="@s.Id">@s.Category - @s.ServiceName @((string.IsNullOrWhiteSpace(s.VariantName)?"":$"({s.VariantName})")) - @s.Price.ToString("N0")</option>}</select></div>
-<div class="col-md-4"><input class="form-control" type="number" step="0.1" name="quantity" value="1" /></div>
-<div class="col-12"><textarea class="form-control" name="Notes" placeholder="Ghi chu"></textarea></div>
-<div class="col-12"><button class="btn btn-brand">Luu bao gia</button></div>
+@using System.Text.Json
+@model CleantopiaCRM.Web.Entities.Quote
+@{
+    var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers;
+    var services = (IEnumerable<CleantopiaCRM.Web.Entities.ServicePrice>)ViewBag.Services;
+    var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
+    var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
+    var isModal = (bool?)ViewBag.IsModal == true;
+
+    var serviceData = services.Select(s => new { id = s.Id, text = $"{s.Category} - {s.ServiceName}", price = s.Price }).ToList();
+    var itemData = Model.Items.Select(x => new { servicePriceId = x.ServicePriceId, quantity = x.Quantity, unitPrice = x.UnitPrice, discountAmount = x.DiscountAmount, note = x.Note }).ToList();
+    var serviceJson = JsonSerializer.Serialize(serviceData);
+    var itemJson = JsonSerializer.Serialize(itemData);
+}
+<link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
+<style>
+.quote-create .group-card{border:none;padding:0;margin-bottom:30px}
+.quote-create .group-title{font-weight:700;color:#1f2d66;margin-bottom:10px;font-size:1.05rem}
+.quote-create .inline-error{font-size:12px;color:#dc3545;margin-top:4px}
+.quote-create .summary-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e6e9f2}
+.quote-create .summary-row:last-child{border-bottom:none}
+.quote-create .summary-label{font-weight:600;color:#25304f}
+.quote-create .summary-value{font-weight:700;color:#0f2d58}
+</style>
+
+<form method="post" class="quote-form quote-create">
+@if (isModal) { <input type="hidden" name="modal" value="1" /> }
+<div asp-validation-summary="ModelOnly" class="text-danger mb-2 d-none"></div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-user me-2 text-primary"></i>Khách hàng</div>
+  <div class="row g-2">
+    <div class="col-md-9">
+      <label class="form-label">Khách hàng (Tên / SĐT / MST / Mã KH)</label>
+      <select id="customerId" class="form-select js-select2" name="CustomerId">
+        <option value="">-- Chọn khách hàng --</option>
+        @foreach (var c in customers)
+        {
+            <option value="@c.Id" selected="@(Model.CustomerId == c.Id)">@c.Name</option>
+        }
+      </select>
+      <div id="errCustomer" class="inline-error d-none">Vui lòng chọn khách hàng.</div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Số báo giá</label>
+      <input class="form-control" value="@Model.QuoteNo" readonly />
+    </div>
+  </div>
+  <div class="row g-2 mt-0">
+    <div class="col-md-4">
+      <label class="form-label">Ngày báo giá</label>
+      <input id="quoteDate" type="date" class="form-control" name="QuoteDate" value="@Model.QuoteDate.ToString("yyyy-MM-dd")" />
+      <div id="errQuoteDate" class="inline-error d-none">Vui lòng chọn ngày báo giá.</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Hiệu lực đến</label>
+      <input type="date" class="form-control" name="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Trạng thái</label>
+      <select class="form-select" name="Status">
+        <option value="Draft" selected="@(Model.Status == "Draft")">Nháp</option>
+        <option value="Sent" selected="@(Model.Status == "Sent")">Đã gửi</option>
+        <option value="Negotiating" selected="@(Model.Status == "Negotiating")">Đang thương lượng</option>
+        <option value="Approved" selected="@(Model.Status == "Approved")">Đã duyệt</option>
+        <option value="Rejected" selected="@(Model.Status == "Rejected")">Từ chối</option>
+        <option value="Cancelled" selected="@(Model.Status == "Cancelled")">Đã hủy</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-location-dot me-2 text-primary"></i>Địa chỉ dịch vụ</div>
+  <div class="row g-2">
+    <div class="col-md-6">
+      <label class="form-label">Địa chỉ dịch vụ</label>
+      <input class="form-control" id="serviceAddressText" name="ServiceAddressText" value="@Model.ServiceAddressText" placeholder="Số nhà, tên đường" />
+      <input type="hidden" name="ServiceAddressId" id="serviceAddressId" value="@Model.ServiceAddressId" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Tỉnh/Thành</label>
+      <select class="form-select js-select2" id="provinceId" name="ServiceProvinceId">
+        @foreach (var p in provinces)
+        {
+            <option value="@p.Id" selected="@(Model.ServiceProvinceId == p.Id)">@p.ProvinceName</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Phường/Xã</label>
+      <select class="form-select js-select2" id="wardId" name="ServiceWardId">
+        @foreach (var w in wards)
+        {
+            <option value="@w.Id" selected="@(Model.ServiceWardId == w.Id)">@w.WardName</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Người liên hệ</label><input class="form-control" id="contactName" name="ContactName" value="@Model.ContactName" /></div>
+    <div class="col-md-3"><label class="form-label">SĐT liên hệ</label><input class="form-control" id="contactPhone" name="ContactPhone" value="@Model.ContactPhone" /></div>
+    <div class="col-12"><div id="errServiceAddress" class="inline-error d-none">Vui lòng nhập/chọn địa chỉ dịch vụ.</div></div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-file-invoice me-2 text-primary"></i>Thông tin xuất hóa đơn</div>
+  <div class="row g-2 mb-2 align-items-center">
+    <div class="col-md-4">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="hasVatInvoice" name="HasVatInvoice" value="true" @(Model.HasVatInvoice ? "checked" : "")>
+        <label class="form-check-label" for="hasVatInvoice">Có xuất hóa đơn VAT</label>
+      </div>
+    </div>
+  </div>
+  <div class="row g-2 mb-0">
+    <div class="col-md-3"><input class="form-control" id="invCompany" name="InvoiceCompanyName" value="@Model.InvoiceCompanyName" placeholder="Tên công ty" /></div>
+    <div class="col-md-3"><input class="form-control" id="invTaxCode" name="InvoiceTaxCode" value="@Model.InvoiceTaxCode" placeholder="Mã số thuế" /></div>
+    <div class="col-md-3"><input class="form-control" id="invEmail" name="InvoiceEmail" value="@Model.InvoiceEmail" placeholder="Email nhận hóa đơn" /></div>
+    <div class="col-md-3"><input class="form-control" id="invReceiver" name="InvoiceReceiver" value="@Model.InvoiceReceiver" placeholder="Người nhận hóa đơn" /></div>
+    <div class="col-md-12"><input class="form-control" id="invAddress" name="InvoiceAddress" value="@Model.InvoiceAddress" placeholder="Địa chỉ xuất hóa đơn" /></div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="group-title mb-0"><i class="fa-solid fa-screwdriver-wrench me-2 text-primary"></i>Danh sách dịch vụ</div>
+    <button type="button" class="btn btn-sm btn-brand" id="btnAddRow"><i class="fa-solid fa-plus"></i> Thêm dòng</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle mb-2" id="quoteItemsTable">
+      <thead class="table-light">
+        <tr><th style="width:28%">Dịch vụ</th><th style="width:9%">Số lượng</th><th style="width:14%">Đơn giá</th><th style="width:12%">Giảm giá</th><th style="width:14%">Thành tiền</th><th style="width:17%">Ghi chú</th><th style="width:6%"></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="row g-2 mb-2">
+    <div class="col-md-12"><label class="form-label">Ghi chú báo giá</label><textarea class="form-control" name="Notes" id="quoteNotes" rows="2">@Model.Notes</textarea></div>
+    <div class="col-md-4 ms-auto">
+      <div class="summary-row"><div class="summary-label">Tạm tính</div><div class="summary-value" id="quoteSubTotalLabel">0</div><input type="hidden" id="quoteSubTotalValue" name="SubtotalAmount" value="@Model.SubtotalAmount" /></div>
+      <div class="summary-row"><div class="summary-label">Giảm giá</div><div style="width:170px"><input type="text" class="form-control form-control-sm text-end" id="quoteDiscountDisplay" value="@Model.DiscountAmount.ToString("N0")" inputmode="numeric" /><input type="hidden" name="DiscountAmount" id="quoteDiscountValue" value="@Model.DiscountAmount.ToString("0")" /></div></div>
+      <div class="summary-row"><div class="summary-label">VAT (%)</div><div style="width:110px"><input type="number" class="form-control form-control-sm text-end" id="quoteVatRate" name="VatRate" value="@Model.VatRate.ToString("0.##")" min="0" max="100" step="0.1" /></div><input type="hidden" id="quoteVatAmountValue" name="VatAmount" value="@Model.VatAmount" /></div>
+      <div class="summary-row"><div class="summary-label">Tổng tiền</div><div class="summary-value" id="quoteGrandTotalLabel">0</div><input type="hidden" id="quoteGrandTotal" name="TotalAmount" value="@Model.TotalAmount" /></div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2">
+  <button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu báo giá</button>
+  @if (isModal) { <button type="button" class="btn btn-secondary" onclick="window.parent && window.parent.CRM && window.parent.CRM.closeQuoteModal(false);"><i class="fa-solid fa-xmark"></i> Đóng</button> }
+  else { <a href="/Quotes" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a> }
+</div>
 </form>
 
+@section Scripts {
+<script src="~/lib/select2/dist/js/select2.min.js"></script>
+<partial name="_ValidationScriptsPartial" />
+<script>
+(function(){
+  const services = @Html.Raw(serviceJson);
+  const initialItems = @Html.Raw(itemJson);
+  const tableBody = document.querySelector('#quoteItemsTable tbody');
+  const subTotalLabel = document.getElementById('quoteSubTotalLabel');
+  const subTotalValueEl = document.getElementById('quoteSubTotalValue');
+  const grandTotalLabel = document.getElementById('quoteGrandTotalLabel');
+  const grandTotalEl = document.getElementById('quoteGrandTotal');
+  const quoteVatRate = document.getElementById('quoteVatRate');
+  const vatAmountValueEl = document.getElementById('quoteVatAmountValue');
+  const quoteDiscountDisplay = document.getElementById('quoteDiscountDisplay');
+  const quoteDiscountValue = document.getElementById('quoteDiscountValue');
+  const provinceId = document.getElementById('provinceId');
+  const wardId = document.getElementById('wardId');
+
+  function formatCurrency(v){ return (v || 0).toLocaleString('vi-VN'); }
+  function parseMoney(text){ const d=(text||'').toString().replace(/[^\d]/g,''); return d?parseInt(d,10):0; }
+  async function loadWards(selectedWardId){
+    if(!provinceId.value) return;
+    const res = await fetch(`/api/address/wards?provinceId=${provinceId.value}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    wardId.innerHTML = data.map(x=>`<option value="${x.id}">${x.wardName}</option>`).join('');
+    if(selectedWardId) $('#wardId').val(String(selectedWardId)).trigger('change');
+  }
+  function buildServiceOptions(selectedId){ return '<option value="">-- Chọn dịch vụ --</option>' + services.map(s=>`<option value="${s.id}" data-price="${s.price}" ${Number(selectedId)===Number(s.id)?'selected':''}>${s.text}</option>`).join(''); }
+  function recalcRow(tr){
+    const qty = parseFloat(tr.querySelector('.js-qty').value||'0')||0;
+    const pDisplay = tr.querySelector('.js-price-display');
+    const dDisplay = tr.querySelector('.js-discount-display');
+    const p = parseMoney(pDisplay.value), d = parseMoney(dDisplay.value);
+    tr.querySelector('.js-price-value').value = p;
+    tr.querySelector('.js-discount-value').value = d;
+    pDisplay.value = p ? formatCurrency(p) : '';
+    dDisplay.value = d ? formatCurrency(d) : '';
+    tr.querySelector('.js-amount').value = formatCurrency(Math.max(0, Math.round(qty * p - d)));
+  }
+  function recalcAll(){
+    let subtotal = 0;
+    tableBody.querySelectorAll('tr').forEach(tr=>{ recalcRow(tr); const qty=parseFloat(tr.querySelector('.js-qty').value||'0')||0; const p=parseInt(tr.querySelector('.js-price-value').value||'0',10)||0; const d=parseInt(tr.querySelector('.js-discount-value').value||'0',10)||0; subtotal += Math.max(0, qty*p-d); });
+    const subTotalRounded = Math.max(0, Math.round(subtotal));
+    subTotalLabel.textContent = formatCurrency(subTotalRounded);
+    subTotalValueEl.value = subTotalRounded.toString();
+    const qd = parseMoney(quoteDiscountDisplay.value); quoteDiscountValue.value = qd; quoteDiscountDisplay.value = qd?formatCurrency(qd):'';
+    const vatRate = Math.max(0, Math.min(100, parseFloat(quoteVatRate?.value || '8') || 0));
+    quoteVatRate.value = vatRate.toString();
+    const beforeVat = Math.max(0, Math.round(subtotal - qd));
+    const vatAmount = Math.round(beforeVat * (vatRate / 100));
+    const totalNum = beforeVat + vatAmount;
+    vatAmountValueEl.value = vatAmount.toString();
+    grandTotalEl.value = totalNum.toString();
+    grandTotalLabel.textContent = formatCurrency(totalNum);
+  }
+  function bindRow(tr){
+    const s = tr.querySelector('.js-service');
+    $(s).select2({ width:'100%' });
+    s.addEventListener('change', function(){ const p = parseInt(this.selectedOptions[0]?.dataset?.price || '0', 10) || 0; tr.querySelector('.js-price-value').value = p; tr.querySelector('.js-price-display').value = p ? formatCurrency(p) : ''; recalcAll(); });
+    ['.js-qty','.js-price-display','.js-discount-display'].forEach(sel=>{ const el=tr.querySelector(sel); el.addEventListener('input', recalcAll); el.addEventListener('blur', recalcAll); });
+    tr.querySelector('.js-remove').addEventListener('click', ()=>{ tr.remove(); recalcAll(); });
+  }
+  function createRow(item){
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><select class="form-select js-service" name="itemServicePriceId">${buildServiceOptions(item?.servicePriceId || 0)}</select></td><td><input type="number" class="form-control js-qty" min="0.1" step="0.1" name="itemQuantity" value="${item?.quantity || 1}" /></td><td><input type="text" class="form-control js-price-display" inputmode="numeric" value="${item?.unitPrice ? formatCurrency(item.unitPrice) : ''}" /><input type="hidden" class="js-price-value" name="itemUnitPrice" value="${item?.unitPrice || 0}" /></td><td><input type="text" class="form-control js-discount-display" inputmode="numeric" value="${item?.discountAmount ? formatCurrency(item.discountAmount) : ''}" /><input type="hidden" class="js-discount-value" name="itemDiscountAmount" value="${item?.discountAmount || 0}" /></td><td><input type="text" class="form-control js-amount" readonly /></td><td><input type="text" class="form-control" name="itemNote" value="${item?.note || ''}" /></td><td><button type="button" class="btn btn-sm btn-danger js-remove"><i class="fa-solid fa-trash"></i></button></td>`;
+    tableBody.appendChild(tr); bindRow(tr);
+  }
+
+  $('.js-select2').select2({ width:'100%' });
+  provinceId.addEventListener('change', ()=> loadWards());
+  document.getElementById('btnAddRow').addEventListener('click', ()=> createRow(null));
+  quoteDiscountDisplay.addEventListener('input', recalcAll);
+  quoteDiscountDisplay.addEventListener('blur', recalcAll);
+  quoteVatRate.addEventListener('input', recalcAll);
+  quoteVatRate.addEventListener('blur', recalcAll);
+  initialItems.forEach(i => createRow(i));
+  recalcAll();
+})();
+</script>
+}

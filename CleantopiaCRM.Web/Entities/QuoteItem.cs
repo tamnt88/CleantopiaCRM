@@ -9,5 +9,7 @@ public class QuoteItem
     public ServicePrice? ServicePrice { get; set; }
     public decimal Quantity { get; set; } = 1;
     public decimal UnitPrice { get; set; }
-    public decimal Amount => Quantity * UnitPrice;
+    public decimal DiscountAmount { get; set; }
+    public string? Note { get; set; }
+    public decimal Amount => (Quantity * UnitPrice) - DiscountAmount < 0 ? 0 : (Quantity * UnitPrice) - DiscountAmount;
 }

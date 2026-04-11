@@ -1,33 +1,71 @@
-﻿@model CleantopiaCRM.Web.Entities.ServicePrice
+@model CleantopiaCRM.Web.Entities.ServicePrice
 @{
     ViewData["Title"] = "Thêm giá dịch vụ";
     ViewData["BreadcrumbParent"] = "Bảng giá dịch vụ";
     ViewData["BreadcrumbParentUrl"] = "/ServicePrices";
-    var categories = ViewBag.Categories as List<string> ?? new();
+    var categories = ViewBag.CategoryOptions as List<CleantopiaCRM.Web.Controllers.ServiceCategoryOptionVm> ?? new();
+    var units = ViewBag.Units as List<CleantopiaCRM.Web.Entities.ServiceUnit> ?? new();
     var isModal = (bool?)ViewBag.IsModal == true;
 }
+<link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
 @if (!isModal)
 {
     <h4>Thêm giá dịch vụ</h4>
 }
-<form method="post" class="row g-2 service-price-form">
+<form method="post" class="row g-2 service-price-form form-select2">
     @if (isModal)
     {
         <input type="hidden" name="modal" value="1" />
     }
-    <div class="col-md-3">
-        <label asp-for="Category" class="form-label">Nhóm dịch vụ</label>
-        <input asp-for="Category" class="form-control" list="serviceCategories" placeholder="Ví dụ: Máy lạnh" />
+    <div class="col-sm-6">
+        <label asp-for="Category" class="form-label">Danh mục</label>
+        <select asp-for="Category" class="form-select js-select2" required data-msg-required="Vui lòng chọn danh mục." data-val="true" data-val-required="Vui lòng chọn danh mục.">
+            <option value="">-- Chọn danh mục --</option>
+            @foreach (var c in categories)
+            {
+                <option value="@c.Name">@c.DisplayName</option>
+            }
+        </select>
         <span asp-validation-for="Category" class="text-danger"></span>
     </div>
-    <div class="col-md-4">
+    <div class="col-sm-6">
         <label asp-for="ServiceName" class="form-label">Tên dịch vụ</label>
-        <input asp-for="ServiceName" class="form-control" placeholder="Ví dụ: Vệ sinh máy lạnh" />
+        <input asp-for="ServiceName" class="form-control" placeholder="Ví dụ: Vệ sinh máy lạnh" required data-msg-required="Vui lòng nhập tên dịch vụ." data-val="true" data-val-required="Vui lòng nhập tên dịch vụ." />
         <span asp-validation-for="ServiceName" class="text-danger"></span>
     </div>
-    <div class="col-md-2">
+    <div class="col-sm-6">
         <label asp-for="Price" class="form-label">Giá</label>
-        <input asp-for="Price" type="number" min="0" class="form-control" placeholder="200000" />
+        <input type="text" id="priceDisplay" name="PriceDisplay" class="form-control" placeholder="Ví dụ: 200.000" inputmode="numeric" />
+        <input asp-for="Price" type="hidden" id="priceValue" value="0" data-val="true" data-val-required="Vui lòng nhập giá." />
+        <span asp-validation-for="Price" class="text-danger"></span>
+    </div>
+
+    <div class="col-sm-6">
+        <label asp-for="Unit" class="form-label">Đơn vị tính</label>
+        <select name="unitId" class="form-select js-select2" required data-msg-required="Vui lòng chọn đơn vị tính.">
+            <option value="">-- Chọn đơn vị --</option>
+            @foreach (var u in units)
+            {
+                <option value="@u.Id">@u.Name</option>
+            }
+        </select>
+        @Html.ValidationMessage("unitId", null, new { @class = "text-danger" })
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label">Chu kỳ CS (ngày)</label>
+        <input type="number" name="recareCycleDays" min="1" value="180" class="form-control" placeholder="180" required data-msg-required="Vui lòng nhập chu kỳ CS." data-val="true" data-val-required="Vui lòng nhập chu kỳ CS." />
+        @Html.ValidationMessage("recareCycleDays", null, new { @class = "text-danger" })
+    </div>
+    <div class="col-sm-6">
+        <label asp-for="IsActive" class="form-label">Trạng thái</label>
+        <select asp-for="IsActive" class="form-select">
+            <option value="true">Áp dụng</option>
+            <option value="false">Ngưng áp dụng</option>
+        </select>
+    </div>
+    <div class="col-sm-12">
+        <label asp-for="Description" class="form-label">Mô tả ngắn</label>
+        <textarea asp-for="Description" class="form-control" rows="2" placeholder="Mô tả ngắn dịch vụ"></textarea>
     </div>
 
     <div class="col-12 d-flex gap-2">
@@ -43,17 +81,48 @@
     </div>
 </form>
 
-<datalist id="serviceCategories">
-@foreach (var c in categories)
-{
-    <option value="@c"></option>
-}
-</datalist>
-
 @section Scripts {
+<script src="~/lib/select2/dist/js/select2.min.js"></script>
 <partial name="_ValidationScriptsPartial" />
+<script src="~/lib/jquery-validation/dist/localization/messages_vi.min.js"></script>
 <script>
 (function(){
+  $('.js-select2').select2({ width: '100%' });
+  const priceDisplay = document.getElementById('priceDisplay');
+  const priceValue = document.getElementById('priceValue');
+
+  function formatVnNumber(value){
+    if (!value) return '';
+    return Number(value).toLocaleString('vi-VN');
+  }
+
+  function normalizeDigits(text){
+    const digits = (text || '').replace(/[^\d]/g, '');
+    return digits ? parseInt(digits, 10) : 0;
+  }
+
+  const initialAmount = normalizeDigits(priceValue.value);
+  priceValue.value = initialAmount.toString();
+  priceDisplay.value = initialAmount ? formatVnNumber(initialAmount) : '';
+
+  function syncPriceValue(){
+    const amount = normalizeDigits(priceDisplay.value);
+    priceValue.value = amount.toString();
+    return amount;
+  }
+
+  priceDisplay.addEventListener('input', function(){
+    const amount = syncPriceValue();
+    this.value = amount ? formatVnNumber(amount) : '';
+  });
+  priceDisplay.addEventListener('blur', function(){
+    const amount = syncPriceValue();
+    this.value = amount ? formatVnNumber(amount) : '';
+  });
+  document.querySelector('form.service-price-form').addEventListener('submit', function(){
+    syncPriceValue();
+  });
+
   function notifyModalResize(){
     if (window.parent && window.parent.CRM && window.parent.CRM.resizeServicePriceModal) {
       const form = document.querySelector('form.service-price-form');

@@ -238,34 +238,60 @@ public class ServicePricesController(AppDbContext db) : Controller
 
     public async Task<IActionResult> Create()
     {
-        ViewBag.Categories = await db.ServicePrices.Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync();
+        await LoadPriceFormLookupsAsync();
         ViewBag.IsModal = IsModalRequest();
         return View(new ServicePrice());
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(ServicePrice item)
+    public async Task<IActionResult> Create(ServicePrice item, int? unitId, int? recareCycleDays)
     {
+        if (string.IsNullOrWhiteSpace(item.Category))
+            ModelState.AddModelError(nameof(item.Category), "Vui lòng chọn danh mục.");
+        if (string.IsNullOrWhiteSpace(item.ServiceName))
+            ModelState.AddModelError(nameof(item.ServiceName), "Vui lòng nhập tên dịch vụ.");
+        if (item.Price <= 0)
+            ModelState.AddModelError(nameof(item.Price), "Vui lòng nhập giá lớn hơn 0.");
+
         if (!ModelState.IsValid)
         {
-            ViewBag.Categories = await db.ServicePrices.Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync();
+            await LoadPriceFormLookupsAsync();
             ViewBag.IsModal = IsModalRequest();
             return View(item);
         }
+        if (unitId.GetValueOrDefault() <= 0)
+        {
+            ModelState.AddModelError("unitId", "Vui lòng chọn đơn vị tính.");
+        }
+
+        if (recareCycleDays.GetValueOrDefault() <= 0)
+        {
+            ModelState.AddModelError("recareCycleDays", "Vui lòng nhập chu kỳ CS.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await LoadPriceFormLookupsAsync();
+            ViewBag.IsModal = IsModalRequest();
+            return View(item);
+        }
+
+        var selectedUnitId = unitId.GetValueOrDefault();
+        var selectedCycleDays = recareCycleDays.GetValueOrDefault(180);
+
         item.VariantName = null;
-        item.Description = null;
-        item.IsActive = true;
+        item.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim();
+        item.IsActive = item.IsActive;
         item.DisplayOrder = 0;
-        item.Unit = await db.ServiceUnits.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).Select(x => x.Name).FirstOrDefaultAsync() ?? "Gói";
+        item.Unit = await db.ServiceUnits.Where(x => x.Id == selectedUnitId).Select(x => x.Name).FirstOrDefaultAsync() ?? "Gói";
         db.ServicePrices.Add(item);
         await db.SaveChangesAsync();
 
-        var unitId = await db.ServiceUnits.Where(x => x.Name == item.Unit).Select(x => x.Id).FirstOrDefaultAsync();
         db.ServicePricePolicies.Add(new ServicePricePolicy
         {
             ServicePriceId = item.Id,
-            UnitId = unitId > 0 ? unitId : await db.ServiceUnits.Where(x => x.IsActive).OrderBy(x => x.SortOrder).Select(x => x.Id).FirstOrDefaultAsync(),
-            RecareCycleDays = 180
+            UnitId = selectedUnitId > 0 ? selectedUnitId : await db.ServiceUnits.Where(x => x.IsActive).OrderBy(x => x.SortOrder).Select(x => x.Id).FirstOrDefaultAsync(),
+            RecareCycleDays = selectedCycleDays
         });
         await db.SaveChangesAsync();
         return ModalSuccessResult(nameof(Index));
@@ -274,27 +300,79 @@ public class ServicePricesController(AppDbContext db) : Controller
     public async Task<IActionResult> Edit(int id)
     {
         var item = await db.ServicePrices.Include(x => x.Policy).FirstOrDefaultAsync(x => x.Id == id);
-        ViewBag.Categories = await db.ServicePrices.Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync();
+        await LoadPriceFormLookupsAsync();
+        ViewBag.SelectedUnitId = item?.Policy?.UnitId;
+        ViewBag.RecareCycleDays = item?.Policy?.RecareCycleDays ?? 180;
         ViewBag.IsModal = IsModalRequest();
         return item is null ? NotFound() : View(item);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Edit(int id, ServicePrice item)
+    public async Task<IActionResult> Edit(int id, ServicePrice item, int? unitId, int? recareCycleDays)
     {
         var old = await db.ServicePrices.Include(x => x.Policy).FirstOrDefaultAsync(x => x.Id == id);
         if (old is null) return NotFound();
 
+        if (string.IsNullOrWhiteSpace(item.Category))
+            ModelState.AddModelError(nameof(item.Category), "Vui lòng chọn danh mục.");
+        if (string.IsNullOrWhiteSpace(item.ServiceName))
+            ModelState.AddModelError(nameof(item.ServiceName), "Vui lòng nhập tên dịch vụ.");
+        if (item.Price <= 0)
+            ModelState.AddModelError(nameof(item.Price), "Vui lòng nhập giá lớn hơn 0.");
+
         if (!ModelState.IsValid)
         {
-            ViewBag.Categories = await db.ServicePrices.Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync();
+            await LoadPriceFormLookupsAsync();
+            ViewBag.SelectedUnitId = unitId;
+            ViewBag.RecareCycleDays = recareCycleDays ?? old.Policy?.RecareCycleDays ?? 180;
+            ViewBag.IsModal = IsModalRequest();
+            return View(item);
+        }
+        if (unitId.GetValueOrDefault() <= 0)
+        {
+            ModelState.AddModelError("unitId", "Vui lòng chọn đơn vị tính.");
+        }
+
+        if (recareCycleDays.GetValueOrDefault() <= 0)
+        {
+            ModelState.AddModelError("recareCycleDays", "Vui lòng nhập chu kỳ CS.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            await LoadPriceFormLookupsAsync();
+            ViewBag.SelectedUnitId = unitId;
+            ViewBag.RecareCycleDays = recareCycleDays ?? old.Policy?.RecareCycleDays ?? 180;
             ViewBag.IsModal = IsModalRequest();
             return View(item);
         }
 
+        var selectedUnitId = unitId.GetValueOrDefault();
+        var selectedCycleDays = recareCycleDays.GetValueOrDefault(180);
+
         old.ServiceName = item.ServiceName;
         old.Category = item.Category;
+        old.VariantName = null;
+        old.Description = string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim();
+        old.IsActive = item.IsActive;
         old.Price = item.Price;
+        old.Unit = await db.ServiceUnits.Where(x => x.Id == selectedUnitId).Select(x => x.Name).FirstOrDefaultAsync() ?? old.Unit;
+
+        if (old.Policy is null)
+        {
+            old.Policy = new ServicePricePolicy
+            {
+                ServicePriceId = old.Id,
+                UnitId = selectedUnitId,
+                RecareCycleDays = selectedCycleDays
+            };
+            db.ServicePricePolicies.Add(old.Policy);
+        }
+        else
+        {
+            old.Policy.UnitId = selectedUnitId;
+            old.Policy.RecareCycleDays = selectedCycleDays;
+        }
 
         await db.SaveChangesAsync();
         return ModalSuccessResult(nameof(Index));
@@ -319,6 +397,52 @@ public class ServicePricesController(AppDbContext db) : Controller
             return Redirect(returnUrl);
         return RedirectToAction(fallbackAction);
     }
+
+    private async Task LoadPriceFormLookupsAsync()
+    {
+        var categories = await db.ServiceCategories
+            .AsNoTracking()
+            .OrderBy(x => x.ParentId)
+            .ThenBy(x => x.SortOrder)
+            .ThenBy(x => x.Name)
+            .ToListAsync();
+
+        var childrenByParent = categories
+            .GroupBy(x => x.ParentId ?? 0)
+            .ToDictionary(g => g.Key, g => g.OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToList());
+
+        var categoryOptions = new List<ServiceCategoryOptionVm>();
+
+        void AppendNode(ServiceCategory node, int level)
+        {
+            var indent = string.Concat(Enumerable.Repeat("|--", level));
+            categoryOptions.Add(new ServiceCategoryOptionVm
+            {
+                Id = node.Id,
+                Name = node.Name,
+                DisplayName = string.IsNullOrEmpty(indent) ? node.Name : $"{indent} {node.Name}"
+            });
+
+            if (childrenByParent.TryGetValue(node.Id, out var children))
+            {
+                foreach (var child in children)
+                {
+                    AppendNode(child, level + 1);
+                }
+            }
+        }
+
+        if (childrenByParent.TryGetValue(0, out var roots))
+        {
+            foreach (var root in roots)
+            {
+                AppendNode(root, 0);
+            }
+        }
+
+        ViewBag.CategoryOptions = categoryOptions;
+        ViewBag.Units = await db.ServiceUnits.Where(x => x.IsActive).OrderBy(x => x.SortOrder).ThenBy(x => x.Name).ToListAsync();
+    }
 }
 
 public class ServiceCategoryVm
@@ -331,4 +455,11 @@ public class ServiceCategoryVm
     public int ChildCount { get; set; }
     public string Path { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+}
+
+public class ServiceCategoryOptionVm
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
 }

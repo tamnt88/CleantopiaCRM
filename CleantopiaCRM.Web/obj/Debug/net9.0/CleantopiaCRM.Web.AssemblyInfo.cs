@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CleantopiaCRM.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+45348c76925414c923e5c2cdec1c1f14aa4f68cf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+abba404ac799640d600546df90037ce57bf915d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("CleantopiaCRM.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CleantopiaCRM.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

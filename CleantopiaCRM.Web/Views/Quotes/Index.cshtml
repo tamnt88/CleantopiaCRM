@@ -1,14 +1,309 @@
-﻿@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Quote>
+@model CleantopiaCRM.Web.Models.Common.PagedResult<CleantopiaCRM.Web.Entities.Quote>
 @{
     ViewData["Title"] = "Báo giá";
     var customers = ViewBag.Customers as List<CleantopiaCRM.Web.Entities.Customer> ?? new();
-    var route = new Dictionary<string, string?>();
-    foreach (var key in Context.Request.Query.Keys)
-    {
-        if (!string.Equals(key, "page", StringComparison.OrdinalIgnoreCase)) route[key] = Context.Request.Query[key].ToString();
-    }
+    var provinceMap = ViewBag.ProvinceMap as Dictionary<int, string> ?? new Dictionary<int, string>();
+    var wardMap = ViewBag.WardMap as Dictionary<int, string> ?? new Dictionary<int, string>();
 }
-<div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0">Báo giá</h4><a href="/Quotes/Create" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Tạo báo giá</a></div>
-<form method="get" class="card card-body mb-3"><div class="row g-2"><div class="col-md-3"><input name="q" value="@Model.Query" class="form-control" placeholder="Mã báo giá" /></div><div class="col-md-3"><select name="customerId" class="form-select"><option value="">-- Khách hàng --</option>@foreach(var c in customers){<option value="@c.Id" selected="@(c.Id==(int?)ViewBag.CustomerId)">@c.Name</option>}</select></div><div class="col-md-2"><select name="status" class="form-select"><option value="">-- Trạng thái --</option><option selected="@("Draft"==(string?)ViewBag.Status)">Draft</option><option selected="@("Approved"==(string?)ViewBag.Status)">Approved</option></select></div><div class="col-md-2"><input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control" /></div><div class="col-md-2"><input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control" /></div><div class="col-md-12 d-flex gap-2"><button class="btn btn-primary"><i class="fa-solid fa-filter"></i> Lọc</button><a class="btn btn-outline-secondary" href="/Quotes"><i class="fa-solid fa-rotate-left"></i> Đặt lại</a></div></div></form>
-<div class="table-responsive"><table class="table table-striped table-bordered align-middle"><thead class="table-light"><tr><th>Số</th><th>Khách hàng</th><th>Ngày</th><th>Trạng thái</th><th style="width:260px">Thao tác</th></tr></thead><tbody>@foreach(var q in Model.Items){<tr><td>@q.QuoteNo</td><td>@q.Customer?.Name</td><td>@q.QuoteDate.ToString("dd/MM/yyyy")</td><td>@q.Status</td><td><a href="/Quotes/Edit/@q.Id" class="btn btn-sm btn-outline-primary"><i class="fa-solid fa-pen-to-square"></i></a> <a href="/Quotes/Approve/@q.Id" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-check"></i></a> <a href="/Quotes/ExportPdf/@q.Id" class="btn btn-sm btn-outline-danger"><i class="fa-solid fa-file-pdf"></i></a> <a href="/Quotes/ExportExcel/@q.Id" class="btn btn-sm btn-outline-success"><i class="fa-solid fa-file-excel"></i></a> <form method="post" action="/Quotes/Delete/@q.Id" class="d-inline"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa báo giá?')"><i class="fa-solid fa-trash"></i></button></form></td></tr>}</tbody></table></div>
-@if (Model.TotalPages > 1){<nav><ul class="pagination">@for (var i = 1; i <= Model.TotalPages; i++){<li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" asp-action="Index" asp-all-route-data="route" asp-route-page="@i">@i</a></li>}</ul></nav>}
+<link rel="stylesheet" href="~/lib/datatables/css/dataTables.bootstrap5.min.css" />
+<style>
+    .quote-index .dataTables_wrapper .pagination { margin-bottom: 0; gap: 0 !important; }
+    .quote-index .dataTables_wrapper .pagination .page-item { margin: 0 !important; }
+    .quote-index .dataTables_wrapper .pagination .page-link { border-radius: 0; min-width: 36px; text-align: center; margin-left: 0 !important; }
+    .quote-index .dataTables_wrapper .pagination .page-item:first-child .page-link { border-top-left-radius: .375rem; border-bottom-left-radius: .375rem; }
+    .quote-index .dataTables_wrapper .pagination .page-item:last-child .page-link { border-top-right-radius: .375rem; border-bottom-right-radius: .375rem; }
+    #quoteCrudModal .modal-dialog { max-width: 980px; }
+    .quote-index .table-responsive { overflow: visible; }
+    .quote-index .dropdown-menu { z-index: 1080; }
+    .quote-index #quoteTable thead th { white-space: nowrap; }
+    .quote-index .action-col { width: 150px; white-space: nowrap; }
+</style>
+
+<div class="quote-index">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Báo giá</h4>
+        <button type="button" class="btn btn-brand js-open-quote-modal" data-url="/Quotes/Create?modal=1"><i class="fa-solid fa-plus"></i> Tạo báo giá</button>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-3"><input id="filterQ" class="form-control" placeholder="Mã báo giá / Khách hàng" value="@Model.Query" /></div>
+        <div class="col-md-3">
+            <select id="filterCustomer" class="form-select">
+                <option value="">-- Khách hàng --</option>
+                @foreach (var c in customers)
+                {
+                    <option value="@c.Name">@c.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select id="filterStatus" class="form-select">
+                <option value="">-- Trạng thái --</option>
+                <option value="Nháp">Nháp</option>
+                <option value="Đã gửi">Đã gửi</option>
+                <option value="Đang thương lượng">Đang thương lượng</option>
+                <option value="Đã duyệt">Đã duyệt</option>
+                <option value="Từ chối">Từ chối</option>
+                <option value="Đã hủy">Đã hủy</option>
+            </select>
+        </div>
+        <div class="col-md-2"><input type="date" id="filterFromDate" class="form-control" /></div>
+        <div class="col-md-2"><input type="date" id="filterToDate" class="form-control" /></div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="quoteTable" class="table table-striped table-bordered align-middle w-100">
+            <thead class="table-light">
+                <tr>
+                    <th>Số báo giá</th>
+                    <th>Khách hàng</th>
+                    <th>Thời gian</th>
+                    <th>Giá trị</th>
+                    <th>Giảm giá</th>
+                    <th>VAT</th>
+                    <th>Xuất HĐ</th>
+                    <th>Trạng thái</th>
+                    <th class="action-col">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var q in Model.Items)
+            {
+                var lineTotalFallback = q.Items?.Sum(x => x.Amount) ?? 0;
+                var subTotal = q.SubtotalAmount > 0 ? q.SubtotalAmount : Math.Max(0, lineTotalFallback - q.DiscountAmount);
+                var vatAmount = q.VatAmount > 0 ? q.VatAmount : Math.Round(subTotal * (q.VatRate / 100m), 0, MidpointRounding.AwayFromZero);
+                var total = q.TotalAmount > 0 ? q.TotalAmount : (subTotal + vatAmount);
+                var daysLeft = q.ValidUntil.HasValue ? (q.ValidUntil.Value.Date - DateTime.Today).Days : (int?)null;
+                var daysLeftText = !daysLeft.HasValue ? "-" : daysLeft.Value < 0 ? $"Quá hạn {Math.Abs(daysLeft.Value)} ngày" : $"{daysLeft.Value} ngày";
+                var ward = q.ServiceWardId.HasValue && wardMap.ContainsKey(q.ServiceWardId.Value) ? wardMap[q.ServiceWardId.Value] : "";
+                var province = q.ServiceProvinceId.HasValue && provinceMap.ContainsKey(q.ServiceProvinceId.Value) ? provinceMap[q.ServiceProvinceId.Value] : "";
+                var addrParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(q.ServiceAddressText)) addrParts.Add(q.ServiceAddressText!);
+                if (!string.IsNullOrWhiteSpace(ward) && !(q.ServiceAddressText ?? "").Contains(ward, StringComparison.OrdinalIgnoreCase)) addrParts.Add(ward);
+                if (!string.IsNullOrWhiteSpace(province) && !(q.ServiceAddressText ?? "").Contains(province, StringComparison.OrdinalIgnoreCase)) addrParts.Add(province);
+                var fullAddress = addrParts.Count > 0 ? string.Join(", ", addrParts) : "-";
+                var customerCode = string.IsNullOrWhiteSpace(q.Customer?.CustomerCode) ? "-" : q.Customer!.CustomerCode;
+                var statusText = q.Status switch
+                {
+                    "Approved" => "Đã duyệt",
+                    "Sent" => "Đã gửi",
+                    "Negotiating" => "Đang thương lượng",
+                    "Rejected" => "Từ chối",
+                    "Cancelled" => "Đã hủy",
+                    _ => "Nháp"
+                };
+                <tr>
+                    <td>@q.QuoteNo</td>
+                    <td>
+                        <div><span class="badge bg-primary fw-normal">@customerCode</span></div>
+                        <div>@q.Customer?.Name</div>
+                        <div>@fullAddress</div>
+                    </td>
+                    <td data-date="@q.QuoteDate.ToString("yyyy-MM-dd")" data-days="@(daysLeft ?? -9999)">
+                        @if (!daysLeft.HasValue)
+                        {
+                            <div><span class="badge bg-secondary fw-normal">@daysLeftText</span></div>
+                        }
+                        else if (daysLeft.Value < 0)
+                        {
+                            <div><span class="badge bg-danger fw-normal">@daysLeftText</span></div>
+                        }
+                        else if (daysLeft.Value <= 2)
+                        {
+                            <div><span class="badge bg-warning text-dark fw-normal">@daysLeftText</span></div>
+                        }
+                        else
+                        {
+                            <div><span class="badge bg-success fw-normal">@daysLeftText</span></div>
+                        }
+                        <div class="mt-1">@q.QuoteDate.ToString("dd/MM/yyyy")</div>
+                        <div>@(q.ValidUntil?.ToString("dd/MM/yyyy") ?? "-")</div>
+                    </td>
+                    <td data-amount="@total">
+                        <div><span class="badge bg-secondary fw-normal">@subTotal.ToString("N0")</span></div>
+                        <div class="mt-1"><strong>@total.ToString("N0")</strong></div>
+                    </td>
+                    <td data-amount="@q.DiscountAmount">@q.DiscountAmount.ToString("N0")</td>
+                    <td data-amount="@vatAmount">
+                        <div><span class="badge bg-info text-dark fw-normal">@q.VatRate.ToString("0.##")%</span></div>
+                        <div class="mt-1">@vatAmount.ToString("N0")</div>
+                    </td>
+                    <td>
+                        @if (q.HasVatInvoice)
+                        {
+                            <span class="badge bg-primary fw-normal">Có</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary fw-normal">Không</span>
+                        }
+                    </td>
+                    <td>
+                        @if (statusText == "Đã duyệt")
+                        {
+                            <span class="badge bg-success fw-normal">Đã duyệt</span>
+                        }
+                        else if (statusText == "Đã gửi")
+                        {
+                            <span class="badge bg-info text-dark fw-normal">Đã gửi</span>
+                        }
+                        else if (statusText == "Đang thương lượng")
+                        {
+                            <span class="badge bg-warning text-dark fw-normal">Đang thương lượng</span>
+                        }
+                        else if (statusText == "Từ chối")
+                        {
+                            <span class="badge bg-danger fw-normal">Từ chối</span>
+                        }
+                        else if (statusText == "Đã hủy")
+                        {
+                            <span class="badge bg-dark fw-normal">Đã hủy</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary fw-normal">Nháp</span>
+                        }
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary js-open-quote-modal" data-url="/Quotes/Edit/@q.Id?modal=1"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="/Quotes/Approve/@q.Id" onclick="return confirm('Duyệt báo giá này?');">
+                                        <i class="fa-solid fa-check text-success me-2"></i>Duyệt
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/Quotes/ExportPdf/@q.Id"><i class="fa-solid fa-file-pdf text-danger me-2"></i>PDF</a></li>
+                                <li><a class="dropdown-item" href="/Quotes/ExportWord/@q.Id"><i class="fa-solid fa-file-word text-primary me-2"></i>Word</a></li>
+                                <li><a class="dropdown-item" href="/Quotes/ExportJpg/@q.Id"><i class="fa-solid fa-file-image text-warning me-2"></i>JPG</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="post" action="/Quotes/Delete/@q.Id" class="m-0">
+                                        <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Xóa báo giá này?')">
+                                            <i class="fa-solid fa-trash me-2"></i>Xóa
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="small text-muted mt-2">
+        Ghi chú: Tag màu trong cột <strong>Thời gian</strong> thể hiện số ngày hiệu lực còn lại của báo giá; dòng 2 là ngày tạo, dòng 3 là ngày hết hiệu lực. Cột <strong>Trạng thái</strong>: Nháp (mới tạo), Đã gửi (đã gửi khách), Đang thương lượng (đang đàm phán), Đã duyệt (chốt), Từ chối (khách từ chối), Đã hủy (đã hủy báo giá).
+    </div>
+</div>
+
+<div class="modal fade customer-modal" id="quoteCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quoteCrudModalTitle">Báo giá</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="quoteCrudFrame" src="about:blank" style="width:100%;height:560px;border:0;display:block;" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script src="~/lib/datatables/js/jquery.dataTables.min.js"></script>
+<script src="~/lib/datatables/js/dataTables.bootstrap5.min.js"></script>
+<script>
+(function(){
+  const crudModalEl = document.getElementById('quoteCrudModal');
+  const crudModal = new bootstrap.Modal(crudModalEl);
+  const crudFrame = document.getElementById('quoteCrudFrame');
+  const crudTitle = document.getElementById('quoteCrudModalTitle');
+  const fromDateEl = document.getElementById('filterFromDate');
+  const toDateEl = document.getElementById('filterToDate');
+
+  window.CRM = window.CRM || {};
+  window.CRM.closeQuoteModal = function(shouldReload){
+    crudModal.hide();
+    crudFrame.src = 'about:blank';
+    if (shouldReload) window.location.reload();
+  };
+  window.CRM.resizeQuoteModal = function(contentHeight){
+    const viewportCap = Math.floor(window.innerHeight * 0.82);
+    const measured = (contentHeight || 0) + 8;
+    const target = Math.max(380, Math.min(measured, viewportCap));
+    crudFrame.style.height = `${target}px`;
+  };
+
+  $(document).on('click', '.js-open-quote-modal', function(){
+    const url = this.getAttribute('data-url');
+    crudTitle.textContent = url.includes('/Edit/') ? 'Cập nhật báo giá' : 'Tạo báo giá';
+    crudFrame.src = url;
+    crudModal.show();
+  });
+
+  crudFrame.addEventListener('load', function(){
+    try {
+      const doc = crudFrame.contentWindow.document;
+      const measure = function(){
+        const h = Math.max(
+          doc.body ? doc.body.scrollHeight : 0,
+          doc.documentElement ? doc.documentElement.scrollHeight : 0
+        );
+        window.CRM.resizeQuoteModal(h);
+      };
+      measure();
+      setTimeout(measure, 120);
+      setTimeout(measure, 260);
+    } catch (e) {}
+  });
+
+  $.fn.dataTable.ext.search.push(function(settings, data, dataIndex){
+    if (settings.nTable.id !== 'quoteTable') return true;
+    const row = settings.aoData[dataIndex].nTr;
+    const rowDate = row.querySelector('td[data-date]')?.getAttribute('data-date') || '';
+    const rowStatus = data[7] || '';
+
+    const from = fromDateEl.value;
+    const to = toDateEl.value;
+    if (from && rowDate < from) return false;
+    if (to && rowDate > to) return false;
+
+    const status = $('#filterStatus').val();
+    if (status && !rowStatus.includes(status)) return false;
+
+    return true;
+  });
+
+  const table = $('#quoteTable').DataTable({
+    pageLength: 20,
+    order: [],
+    lengthChange: false,
+    searching: true,
+    dom: "t<'d-flex justify-content-end mt-2'p>",
+    pagingType: 'full_numbers',
+    language: {
+      zeroRecords: 'Không tìm thấy dữ liệu phù hợp',
+      paginate: { first: '«', last: '»', next: '›', previous: '‹' }
+    },
+    columnDefs: [{ targets: 8, orderable: false, searchable: false }]
+  });
+
+  function applyFilter(){
+    const q = $('#filterQ').val();
+    const customer = $('#filterCustomer').val();
+    table.search(q || '');
+    table.column(1).search(customer || '');
+    table.draw();
+  }
+
+  $('#filterQ').on('input', applyFilter);
+  $('#filterCustomer, #filterStatus, #filterFromDate, #filterToDate').on('change', applyFilter);
+})();
+</script>
+}

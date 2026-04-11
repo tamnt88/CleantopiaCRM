@@ -118,6 +118,7 @@ CREATE TABLE dbo.Addresses (
 
 CREATE TABLE dbo.Customers (
     Id INT IDENTITY(1,1) PRIMARY KEY,
+    CustomerCode NVARCHAR(30) NULL,
     Name NVARCHAR(250) NOT NULL,
     Phone NVARCHAR(20) NULL,
     Email NVARCHAR(250) NULL,
@@ -203,6 +204,23 @@ CREATE TABLE dbo.Quotes (
     QuoteDate DATE NOT NULL,
     ValidUntil DATE NULL,
     Status NVARCHAR(50) NOT NULL,
+    ServiceAddressId INT NULL,
+    ServiceProvinceId INT NULL,
+    ServiceWardId INT NULL,
+    ServiceAddressText NVARCHAR(1000) NULL,
+    ContactName NVARCHAR(250) NULL,
+    ContactPhone NVARCHAR(20) NULL,
+    HasVatInvoice BIT NOT NULL DEFAULT(0),
+    InvoiceCompanyName NVARCHAR(250) NULL,
+    InvoiceTaxCode NVARCHAR(50) NULL,
+    InvoiceAddress NVARCHAR(500) NULL,
+    InvoiceEmail NVARCHAR(250) NULL,
+    InvoiceReceiver NVARCHAR(250) NULL,
+    DiscountAmount DECIMAL(18,2) NOT NULL DEFAULT(0),
+    VatRate DECIMAL(5,2) NOT NULL DEFAULT(8),
+    SubtotalAmount DECIMAL(18,2) NOT NULL DEFAULT(0),
+    VatAmount DECIMAL(18,2) NOT NULL DEFAULT(0),
+    TotalAmount DECIMAL(18,2) NOT NULL DEFAULT(0),
     Notes NVARCHAR(MAX) NULL,
     CONSTRAINT FK_Quotes_Customers FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(Id)
 );
@@ -213,6 +231,8 @@ CREATE TABLE dbo.QuoteItems (
     ServicePriceId INT NOT NULL,
     Quantity DECIMAL(18,2) NOT NULL,
     UnitPrice DECIMAL(18,2) NOT NULL,
+    DiscountAmount DECIMAL(18,2) NOT NULL DEFAULT(0),
+    Note NVARCHAR(500) NULL,
     CONSTRAINT FK_QuoteItems_Quotes FOREIGN KEY (QuoteId) REFERENCES dbo.Quotes(Id),
     CONSTRAINT FK_QuoteItems_ServicePrices FOREIGN KEY (ServicePriceId) REFERENCES dbo.ServicePrices(Id)
 );
@@ -261,6 +281,7 @@ CREATE TABLE dbo.MaintenanceReminders (
 GO
 
 CREATE INDEX IX_Customers_Name ON dbo.Customers(Name);
+CREATE UNIQUE INDEX IX_Customers_CustomerCode ON dbo.Customers(CustomerCode) WHERE CustomerCode IS NOT NULL;
 CREATE INDEX IX_Customers_Source ON dbo.Customers(CustomerSourceId);
 CREATE INDEX IX_Customers_Type ON dbo.Customers(CustomerTypeId);
 CREATE INDEX IX_CustomerServiceAddresses_Customer ON dbo.CustomerServiceAddresses(CustomerId);

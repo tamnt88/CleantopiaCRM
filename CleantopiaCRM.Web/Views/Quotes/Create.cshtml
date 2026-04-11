@@ -1,13 +1,643 @@
-﻿@model CleantopiaCRM.Web.Entities.Quote
-@{ var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers; var services = (IEnumerable<CleantopiaCRM.Web.Entities.ServicePrice>)ViewBag.Services; }
-<h4>Tao bao gia</h4>
-<form method="post" class="row g-2">
-<div class="col-md-6"><select class="form-select" name="CustomerId">@foreach(var c in customers){<option value="@c.Id">@c.Name</option>}</select></div>
-<div class="col-md-3"><input type="date" class="form-control" name="QuoteDate" value="@Model.QuoteDate.ToString("yyyy-MM-dd")" /></div>
-<div class="col-md-3"><input type="date" class="form-control" name="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" /></div>
-<div class="col-md-8"><select class="form-select" name="servicePriceId">@foreach(var s in services){<option value="@s.Id">@s.Category - @s.ServiceName @((string.IsNullOrWhiteSpace(s.VariantName)?"":$"({s.VariantName})")) - @s.Price.ToString("N0")</option>}</select></div>
-<div class="col-md-4"><input class="form-control" type="number" step="0.1" name="quantity" value="1" /></div>
-<div class="col-12"><textarea class="form-control" name="Notes" placeholder="Ghi chu"></textarea></div>
-<div class="col-12"><button class="btn btn-brand">Luu bao gia</button></div>
+﻿
+@using System.Text.Json
+@model CleantopiaCRM.Web.Entities.Quote
+@{
+    var customers = (IEnumerable<CleantopiaCRM.Web.Entities.Customer>)ViewBag.Customers;
+    var services = (IEnumerable<CleantopiaCRM.Web.Entities.ServicePrice>)ViewBag.Services;
+    var countries = (IEnumerable<CleantopiaCRM.Web.Entities.Country>)ViewBag.Countries;
+    var sources = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerSource>)ViewBag.Sources;
+    var types = (IEnumerable<CleantopiaCRM.Web.Entities.CustomerType>)ViewBag.Types;
+    var provinces = (IEnumerable<CleantopiaCRM.Web.Entities.GhnProvince>)ViewBag.Provinces;
+    var wards = (IEnumerable<CleantopiaCRM.Web.Entities.GhnWard>)ViewBag.Wards;
+    var defaultProvinceId = (int?)ViewBag.DefaultProvinceId ?? 0;
+    var isModal = (bool?)ViewBag.IsModal == true;
+
+    var customerData = customers.Select(c => new
+    {
+        id = c.Id,
+        text = c.Name,
+        phone = c.Phone ?? "",
+        tax = c.TaxCode ?? "",
+        code = c.CustomerCode ?? "",
+        companyName = c.CompanyName ?? "",
+        billingAddress = c.BillingAddress ?? "",
+        billingEmail = c.BillingEmail ?? "",
+        billingPhone = c.BillingPhone ?? "",
+        billingReceiver = c.BillingReceiver ?? ""
+    }).ToList();
+
+    var serviceData = services.Select(s => new
+    {
+        id = s.Id,
+        text = $"{s.Category} - {s.ServiceName}",
+        price = s.Price
+    }).ToList();
+
+    var customerJson = JsonSerializer.Serialize(customerData);
+    var serviceJson = JsonSerializer.Serialize(serviceData);
+}
+<link rel="stylesheet" href="~/lib/select2/dist/css/select2.min.css" />
+<style>
+.quote-create .group-card{border:none;padding:0;margin-bottom:30px}
+.quote-create .group-title{font-weight:700;color:#1f2d66;margin-bottom:10px;font-size:1.05rem}
+.quote-create .picker-table{max-height:220px;overflow:auto;border:1px solid #dfe4ef;border-radius:6px}
+.quote-create .picker-table table{margin-bottom:0}
+.quote-create .picker-table table th,
+.quote-create .picker-table table td{white-space:nowrap}
+.quote-create .inline-error{font-size:12px;color:#dc3545;margin-top:4px}
+.quote-create .summary-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #e6e9f2}
+.quote-create .summary-row:last-child{border-bottom:none}
+.quote-create .summary-label{font-weight:600;color:#25304f}
+.quote-create .summary-value{font-weight:700;color:#0f2d58}
+.quote-create .select2-container--default .select2-selection--single.is-invalid,
+.quote-create .select2-container.is-invalid .select2-selection--single{
+  border-color:#dc3545 !important;
+  box-shadow:0 0 0 .2rem rgba(220,53,69,.15) !important;
+}
+</style>
+
+<form method="post" class="quote-form quote-create">
+@if (isModal) { <input type="hidden" name="modal" value="1" /> }
+<div asp-validation-summary="ModelOnly" class="text-danger mb-2 d-none"></div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-user me-2 text-primary"></i>Khách hàng</div>
+  <div class="row g-2">
+    <div class="col-md-9">
+      <label class="form-label">Khách hàng (Tên / SĐT / MST / Mã KH)</label>
+      <select id="customerId" class="form-select" name="CustomerId"></select>
+      <div id="errCustomer" class="inline-error d-none">Vui lòng chọn khách hàng.</div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">&nbsp;</label>
+      <button type="button" class="btn btn-brand btn-sm w-100" id="btnOpenQuickCustomer"><i class="fa-solid fa-user-plus"></i> Thêm nhanh</button>
+    </div>
+  </div>
+  <div class="row g-2 mt-0">
+    <div class="col-md-4">
+      <label class="form-label">Ngày báo giá</label>
+      <input id="quoteDate" type="date" class="form-control" name="QuoteDate" value="@Model.QuoteDate.ToString("yyyy-MM-dd")" />
+      <div id="errQuoteDate" class="inline-error d-none">Vui lòng chọn ngày báo giá.</div>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Hiệu lực đến</label>
+      <input type="date" class="form-control" name="ValidUntil" value="@Model.ValidUntil?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Trạng thái</label>
+      <select class="form-select" name="Status">
+        <option value="Draft" selected>Nháp</option>
+        <option value="Sent">Đã gửi</option>
+        <option value="Negotiating">Đang thương lượng</option>
+        <option value="Approved">Đã duyệt</option>
+        <option value="Rejected">Từ chối</option>
+        <option value="Cancelled">Đã hủy</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-location-dot me-2 text-primary"></i>Địa chỉ dịch vụ</div>
+  <div class="row g-2">
+    <div class="col-md-6">
+      <div class="d-flex align-items-center justify-content-between">
+        <label class="form-label mb-1">Địa chỉ dịch vụ</label>
+        <button type="button" id="btnOpenAddressPickerInline" class="btn btn-brand btn-sm d-none">Chọn địa chỉ cũ</button>
+      </div>
+      <input class="form-control" id="serviceAddressText" name="ServiceAddressText" placeholder="Số nhà, tên đường" />
+      <input type="hidden" name="ServiceAddressId" id="serviceAddressId" />
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Tỉnh/Thành</label>
+      <select class="form-select js-select2" id="provinceId" name="ServiceProvinceId">
+        @foreach (var p in provinces)
+        {
+            <option value="@p.Id" selected="@(p.Id == defaultProvinceId)">@p.ProvinceName</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Phường/Xã</label>
+      <select class="form-select js-select2" id="wardId" name="ServiceWardId">
+        @foreach (var w in wards)
+        {
+            <option value="@w.Id">@w.WardName</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Người liên hệ</label><input class="form-control" id="contactName" name="ContactName" placeholder="Người liên hệ" /></div>
+    <div class="col-md-3"><label class="form-label">SĐT liên hệ</label><input class="form-control" id="contactPhone" name="ContactPhone" placeholder="SĐT" /></div>
+    <div class="col-12"><div id="errServiceAddress" class="inline-error d-none">Vui lòng nhập/chọn địa chỉ dịch vụ.</div></div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="group-title"><i class="fa-solid fa-file-invoice me-2 text-primary"></i>Thông tin xuất hóa đơn</div>
+  <div class="row g-2 mb-2 align-items-center">
+    <div class="col-md-4">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="hasVatInvoice" name="HasVatInvoice" value="true">
+        <label class="form-check-label" for="hasVatInvoice">Có xuất hóa đơn VAT</label>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <button type="button" id="btnLoadOldInvoiceInfo" class="btn btn-brand btn-sm">Lấy thông tin xuất hóa đơn cũ</button>
+    </div>
+  </div>
+  <div class="row g-2 mb-0">
+    <div class="col-md-3">
+      <input class="form-control" id="invCompany" name="InvoiceCompanyName" placeholder="Tên công ty" />
+      <div id="errInvCompany" class="inline-error d-none">Vui lòng nhập tên công ty.</div>
+    </div>
+    <div class="col-md-3">
+      <input class="form-control" id="invTaxCode" name="InvoiceTaxCode" placeholder="Mã số thuế" />
+      <div id="errInvTaxCode" class="inline-error d-none">Vui lòng nhập mã số thuế.</div>
+    </div>
+    <div class="col-md-3">
+      <input class="form-control" id="invEmail" name="InvoiceEmail" placeholder="Email nhận hóa đơn" />
+      <div id="errInvEmail" class="inline-error d-none">Vui lòng nhập email nhận hóa đơn.</div>
+    </div>
+    <div class="col-md-3">
+      <input class="form-control" id="invReceiver" name="InvoiceReceiver" placeholder="Người nhận hóa đơn" />
+      <div id="errInvReceiver" class="inline-error d-none">Vui lòng nhập người nhận hóa đơn.</div>
+    </div>
+    <div class="col-md-12">
+      <input class="form-control" id="invAddress" name="InvoiceAddress" placeholder="Địa chỉ xuất hóa đơn" />
+      <div id="errInvAddress" class="inline-error d-none">Vui lòng nhập địa chỉ xuất hóa đơn.</div>
+    </div>
+  </div>
+</div>
+
+<div class="group-card">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="group-title mb-0"><i class="fa-solid fa-screwdriver-wrench me-2 text-primary"></i>Danh sách dịch vụ</div>
+    <button type="button" class="btn btn-sm btn-brand" id="btnAddRow"><i class="fa-solid fa-plus"></i> Thêm dòng</button>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle mb-2" id="quoteItemsTable">
+      <thead class="table-light">
+        <tr><th style="width:28%">Dịch vụ</th><th style="width:9%">Số lượng</th><th style="width:14%">Đơn giá</th><th style="width:12%">Giảm giá</th><th style="width:14%">Thành tiền</th><th style="width:17%">Ghi chú</th><th style="width:6%"></th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="row g-2 mb-2">
+    <div class="col-md-12"><label class="form-label">Ghi chú báo giá</label><textarea class="form-control" name="Notes" id="quoteNotes" rows="2"></textarea></div>
+    <div class="col-md-4 ms-auto">
+      <div class="summary-row">
+        <div class="summary-label">Tạm tính</div>
+        <div class="summary-value" id="quoteSubTotalLabel">0</div>
+        <input type="hidden" id="quoteSubTotalValue" name="SubtotalAmount" value="0" />
+      </div>
+      <div class="summary-row">
+        <div class="summary-label">Giảm giá</div>
+        <div style="width:170px">
+          <input type="text" class="form-control form-control-sm text-end" id="quoteDiscountDisplay" value="0" inputmode="numeric" />
+          <input type="hidden" name="DiscountAmount" id="quoteDiscountValue" value="0" />
+        </div>
+      </div>
+      <div class="summary-row">
+        <div class="summary-label">VAT (%)</div>
+        <div style="width:110px">
+          <input type="number" class="form-control form-control-sm text-end" id="quoteVatRate" name="VatRate" value="8" min="0" max="100" step="0.1" />
+        </div>
+        <input type="hidden" id="quoteVatAmountValue" name="VatAmount" value="0" />
+      </div>
+      <div class="summary-row">
+        <div class="summary-label">Tổng tiền</div>
+        <div class="summary-value" id="quoteGrandTotalLabel">0</div>
+        <input type="hidden" id="quoteGrandTotal" name="TotalAmount" value="0" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2">
+  <button class="btn btn-brand"><i class="fa-solid fa-floppy-disk"></i> Lưu báo giá</button>
+  @if (isModal) { <button type="button" class="btn btn-secondary" onclick="window.parent && window.parent.CRM && window.parent.CRM.closeQuoteModal(false);"><i class="fa-solid fa-xmark"></i> Đóng</button> }
+  else { <a href="/Quotes" class="btn btn-secondary"><i class="fa-solid fa-arrow-left"></i> Quay lại</a> }
+</div>
 </form>
 
+<div class="modal fade" id="customerPickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Danh sách khách hàng</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="text" id="customerTableSearch" class="form-control mb-2" placeholder="Tìm theo tên / SĐT / MST / mã KH" />
+      <div class="picker-table">
+        <table class="table table-sm table-hover">
+          <thead class="table-light"><tr><th>Mã KH</th><th>Tên khách hàng</th><th>SĐT</th><th>MST</th></tr></thead>
+          <tbody id="customerPickerBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Thêm khách hàng</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label mb-1">Tên khách hàng</label>
+          <input id="qcName" class="form-control" />
+          <div id="qcNameErr" class="small text-danger d-none mt-1">Vui lòng nhập tên khách hàng.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1">Số điện thoại</label>
+          <input id="qcPhone" class="form-control" />
+          <div id="qcPhoneErr" class="small text-danger d-none mt-1">Vui lòng nhập số điện thoại.</div>
+        </div>
+        <div class="col-md-4"><label class="form-label mb-1">Email</label><input id="qcEmail" class="form-control" /></div>
+        <div class="col-md-4"><label class="form-label mb-1">Quốc gia</label><select id="qcCountryId" class="form-select js-select2-modal">@foreach (var c in countries){<option value="@c.Id">@c.Name</option>}</select></div>
+        <div class="col-md-4">
+          <label class="form-label mb-1">Nguồn khách</label>
+          <select id="qcSourceId" class="form-select js-select2-modal" required><option value="">-- Nguồn khách --</option>@foreach (var s in sources){<option value="@s.Id">@s.Name</option>}</select>
+          <div id="qcSourceErr" class="small text-danger d-none mt-1">Vui lòng chọn nguồn khách.</div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label mb-1">Loại khách</label>
+          <select id="qcTypeId" class="form-select js-select2-modal" required><option value="">-- Loại khách --</option>@foreach (var t in types){<option value="@t.Id">@t.Name</option>}</select>
+          <div id="qcTypeErr" class="small text-danger d-none mt-1">Vui lòng chọn loại khách.</div>
+        </div>
+        <div class="col-12"><label class="form-label mb-1">Ghi chú</label><textarea id="qcNotes" class="form-control" rows="2"></textarea></div>
+      </div>
+      <div id="quickCustomerMsg" class="small text-danger d-none mt-2"></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><button type="button" class="btn btn-brand" id="btnQuickCreateCustomer">Lưu khách hàng</button></div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="addressPickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Chọn địa chỉ khách hàng đã lưu</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body"><div class="table-responsive"><table class="table table-sm table-hover"><thead class="table-light"><tr><th>Địa chỉ</th><th>Người liên hệ</th><th>SĐT</th><th></th></tr></thead><tbody id="addressPickerBody"></tbody></table></div></div>
+  </div></div>
+</div>
+@section Scripts {
+<script src="~/lib/select2/dist/js/select2.min.js"></script>
+<partial name="_ValidationScriptsPartial" />
+<script src="~/lib/jquery-validation/dist/localization/messages_vi.min.js"></script>
+<script>
+(function(){
+  const customers = @Html.Raw(customerJson);
+  const services = @Html.Raw(serviceJson);
+  const tableBody = document.querySelector('#quoteItemsTable tbody');
+  const grandTotalEl = document.getElementById('quoteGrandTotal');
+  const subTotalValueEl = document.getElementById('quoteSubTotalValue');
+  const vatAmountValueEl = document.getElementById('quoteVatAmountValue');
+  const grandTotalLabel = document.getElementById('quoteGrandTotalLabel');
+  const subTotalLabel = document.getElementById('quoteSubTotalLabel');
+  const quoteVatRate = document.getElementById('quoteVatRate');
+  const quoteDiscountDisplay = document.getElementById('quoteDiscountDisplay');
+  const quoteDiscountValue = document.getElementById('quoteDiscountValue');
+  const form = document.querySelector('form.quote-form');
+  const customerSelect = document.getElementById('customerId');
+  const hasVatInvoice = document.getElementById('hasVatInvoice');
+  const btnLoadOldInvoiceInfo = document.getElementById('btnLoadOldInvoiceInfo');
+  const serviceAddressId = document.getElementById('serviceAddressId');
+  const serviceAddressText = document.getElementById('serviceAddressText');
+  const provinceId = document.getElementById('provinceId');
+  const wardId = document.getElementById('wardId');
+  const contactName = document.getElementById('contactName');
+  const contactPhone = document.getElementById('contactPhone');
+  const invCompany = document.getElementById('invCompany');
+  const invTaxCode = document.getElementById('invTaxCode');
+  const invAddress = document.getElementById('invAddress');
+  const invEmail = document.getElementById('invEmail');
+  const invReceiver = document.getElementById('invReceiver');
+  const errInvCompany = document.getElementById('errInvCompany');
+  const errInvTaxCode = document.getElementById('errInvTaxCode');
+  const errInvAddress = document.getElementById('errInvAddress');
+  const errInvEmail = document.getElementById('errInvEmail');
+  const errInvReceiver = document.getElementById('errInvReceiver');
+  const btnOpenAddressPickerInline = document.getElementById('btnOpenAddressPickerInline');
+  const addressPickerBody = document.getElementById('addressPickerBody');
+  let currentAddresses = [];
+
+  function formatCurrency(v){ return (v || 0).toLocaleString('vi-VN'); }
+  function parseMoney(text){ const d=(text||'').toString().replace(/[^\d]/g,''); return d?parseInt(d,10):0; }
+  async function loadWards(){
+    if(!provinceId.value) return;
+    const res = await fetch(`/api/address/wards?provinceId=${provinceId.value}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    wardId.innerHTML = data.map(x=>`<option value="${x.id}">${x.wardName}</option>`).join('');
+  }
+
+  function buildServiceOptions(selectedId){
+    return '<option value="">-- Chọn dịch vụ --</option>' + services.map(s=>`<option value="${s.id}" data-price="${s.price}" ${Number(selectedId)===Number(s.id)?'selected':''}>${s.text}</option>`).join('');
+  }
+  function recalcRow(tr){
+    const qty = parseFloat(tr.querySelector('.js-qty').value||'0')||0;
+    const pDisplay = tr.querySelector('.js-price-display');
+    const dDisplay = tr.querySelector('.js-discount-display');
+    const p = parseMoney(pDisplay.value), d = parseMoney(dDisplay.value);
+    tr.querySelector('.js-price-value').value = p;
+    tr.querySelector('.js-discount-value').value = d;
+    pDisplay.value = p ? formatCurrency(p) : '';
+    dDisplay.value = d ? formatCurrency(d) : '';
+    tr.querySelector('.js-amount').value = formatCurrency(Math.max(0, Math.round(qty * p - d)));
+  }
+  function recalcAll(){
+    let subtotal = 0;
+    tableBody.querySelectorAll('tr').forEach(tr=>{ recalcRow(tr); const qty=parseFloat(tr.querySelector('.js-qty').value||'0')||0; const p=parseInt(tr.querySelector('.js-price-value').value||'0',10)||0; const d=parseInt(tr.querySelector('.js-discount-value').value||'0',10)||0; subtotal += Math.max(0, qty*p-d); });
+    const subTotalRounded = Math.max(0, Math.round(subtotal));
+    if (subTotalLabel) subTotalLabel.textContent = formatCurrency(subTotalRounded);
+    if (subTotalValueEl) subTotalValueEl.value = subTotalRounded.toString();
+    const qd = parseMoney(quoteDiscountDisplay.value); quoteDiscountValue.value = qd; quoteDiscountDisplay.value = qd?formatCurrency(qd):'';
+    const vatRate = Math.max(0, Math.min(100, parseFloat(quoteVatRate?.value || '8') || 0));
+    if (quoteVatRate) quoteVatRate.value = vatRate.toString();
+    const beforeVat = Math.max(0, Math.round(subtotal - qd));
+    const vatAmount = Math.round(beforeVat * (vatRate / 100));
+    const totalNum = beforeVat + vatAmount;
+    if (vatAmountValueEl) vatAmountValueEl.value = vatAmount.toString();
+    const total = formatCurrency(totalNum);
+    grandTotalEl.value = totalNum.toString();
+    if (grandTotalLabel) grandTotalLabel.textContent = total;
+  }
+  function bindRow(tr){
+    const s = tr.querySelector('.js-service');
+    $(s).select2({ width:'100%' });
+    const onServiceChange = function(){
+      const p = parseInt(this.selectedOptions[0]?.dataset?.price || '0', 10) || 0;
+      tr.querySelector('.js-price-value').value = p;
+      tr.querySelector('.js-price-display').value = p ? formatCurrency(p) : '';
+      recalcAll();
+    };
+    s.addEventListener('change', onServiceChange);
+    $(s).on('select2:select', onServiceChange);
+    ['.js-qty','.js-price-display','.js-discount-display'].forEach(sel=>{ const el=tr.querySelector(sel); el.addEventListener('input', recalcAll); el.addEventListener('blur', recalcAll); });
+    tr.querySelector('.js-remove').addEventListener('click', ()=>{ tr.remove(); recalcAll(); });
+  }
+  function createRow(){
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td><select class="form-select js-service" name="itemServicePriceId">${buildServiceOptions(0)}</select></td><td><input type="number" class="form-control js-qty" min="0.1" step="0.1" name="itemQuantity" value="1" /></td><td><input type="text" class="form-control js-price-display" inputmode="numeric" /><input type="hidden" class="js-price-value" name="itemUnitPrice" value="0" /></td><td><input type="text" class="form-control js-discount-display" inputmode="numeric" /><input type="hidden" class="js-discount-value" name="itemDiscountAmount" value="0" /></td><td><input type="text" class="form-control js-amount" readonly /></td><td><input type="text" class="form-control" name="itemNote" /></td><td><button type="button" class="btn btn-sm btn-danger js-remove"><i class="fa-solid fa-trash"></i></button></td>`;
+    tableBody.appendChild(tr); bindRow(tr); recalcAll();
+  }
+  function renderCustomerTable(term){
+    const t = (term||'').trim().toLowerCase();
+    if(!t){
+      document.getElementById('customerPickerBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nhập từ khóa để tìm khách hàng.</td></tr>';
+      return;
+    }
+    const html = customers.filter(c=>!t || (c.text||'').toLowerCase().includes(t) || (c.phone||'').toLowerCase().includes(t) || (c.tax||'').toLowerCase().includes(t) || (c.code||'').toLowerCase().includes(t))
+      .map(c=>`<tr data-id="${c.id}"><td>${c.code||''}</td><td>${c.text||''}</td><td>${c.phone||''}</td><td>${c.tax||''}</td></tr>`).join('');
+    document.getElementById('customerPickerBody').innerHTML = html || '<tr><td colspan="4" class="text-center text-muted">Không có dữ liệu</td></tr>';
+  }
+
+  function getSelectedCustomerData(){
+    const id = parseInt(customerSelect.value || '0', 10);
+    if (!id) return null;
+    return customers.find(x => Number(x.id) === id) || null;
+  }
+
+  function fillInvoiceFromCustomer(){
+    const c = getSelectedCustomerData();
+    if (!c) return;
+    invCompany.value = c.companyName || c.text || '';
+    invTaxCode.value = c.tax || '';
+    invAddress.value = c.billingAddress || '';
+    invEmail.value = c.billingEmail || '';
+    invReceiver.value = c.billingReceiver || c.text || '';
+  }
+
+  async function loadCustomerAddresses(customerId){
+    currentAddresses = [];
+    serviceAddressId.value = '';
+    if (btnOpenAddressPickerInline) btnOpenAddressPickerInline.classList.add('d-none');
+    if(!customerId) return;
+    const res = await fetch(`/Quotes/CustomerAddresses?customerId=${customerId}`);
+    if(!res.ok) return;
+    currentAddresses = await res.json();
+    if(currentAddresses.length > 0){
+      if (btnOpenAddressPickerInline) btnOpenAddressPickerInline.classList.remove('d-none');
+    } else {
+      if (btnOpenAddressPickerInline) btnOpenAddressPickerInline.classList.add('d-none');
+    }
+  }
+
+  async function quickCreateCustomer(){
+    const msg = document.getElementById('quickCustomerMsg');
+    const qcNameErr = document.getElementById('qcNameErr');
+    const qcPhoneErr = document.getElementById('qcPhoneErr');
+    const qcSourceErr = document.getElementById('qcSourceErr');
+    const qcTypeErr = document.getElementById('qcTypeErr');
+    const qcNameEl = document.getElementById('qcName');
+    const qcPhoneEl = document.getElementById('qcPhone');
+    const qcSourceEl = document.getElementById('qcSourceId');
+    const qcTypeEl = document.getElementById('qcTypeId');
+    const markSelect2Invalid = (el, invalid) => {
+      if (!el) return;
+      el.classList.toggle('is-invalid', invalid);
+      const wrap = $(el).next('.select2');
+      if (wrap.length) {
+        wrap.toggleClass('is-invalid', invalid);
+        wrap.find('.select2-selection').toggleClass('is-invalid', invalid);
+      }
+    };
+
+    if (msg) { msg.classList.add('d-none'); msg.textContent = ''; }
+    [qcNameErr, qcPhoneErr, qcSourceErr, qcTypeErr].forEach(el => { if (el) el.classList.add('d-none'); });
+    [qcNameEl, qcPhoneEl, qcSourceEl, qcTypeEl].forEach(el => { if (el) el.classList.remove('is-invalid'); });
+    markSelect2Invalid(qcSourceEl, false);
+    markSelect2Invalid(qcTypeEl, false);
+
+    const payload = {
+      name: qcNameEl.value.trim(),
+      phone: qcPhoneEl.value.trim(),
+      email: document.getElementById('qcEmail').value.trim(),
+      notes: document.getElementById('qcNotes').value.trim(),
+      countryId: parseInt(document.getElementById('qcCountryId').value||'0',10)||null,
+      customerSourceId: parseInt(qcSourceEl.value||'0',10)||null,
+      customerTypeId: parseInt(qcTypeEl.value||'0',10)||null
+    };
+    let valid = true;
+    if(!payload.name){ qcNameEl.classList.add('is-invalid'); if (qcNameErr) qcNameErr.classList.remove('d-none'); valid = false; }
+    if(!payload.phone){ qcPhoneEl.classList.add('is-invalid'); if (qcPhoneErr) qcPhoneErr.classList.remove('d-none'); valid = false; }
+    if(!payload.customerSourceId){ markSelect2Invalid(qcSourceEl, true); if (qcSourceErr) qcSourceErr.classList.remove('d-none'); valid = false; }
+    if(!payload.customerTypeId){ markSelect2Invalid(qcTypeEl, true); if (qcTypeErr) qcTypeErr.classList.remove('d-none'); valid = false; }
+    if(!valid) return;
+
+    const res = await fetch('/Quotes/QuickCreateCustomer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if(!res.ok){ msg.classList.remove('d-none'); msg.textContent = data?.message || 'Không tạo được khách hàng.'; return; }
+
+    customers.push({ id:data.id, text:data.text, phone:data.phone||'', tax:data.taxCode||'', code:data.customerCode||'' });
+    const op = new Option(data.text, data.id, true, true);
+    op.setAttribute('data-phone', data.phone||''); op.setAttribute('data-tax', data.taxCode||''); op.setAttribute('data-code', data.customerCode||'');
+    $('#customerId').append(op).trigger('change');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('quickCustomerModal')).hide();
+    renderCustomerTable(document.getElementById('customerTableSearch').value || '');
+  }
+
+  const emptyOption = new Option('', '', true, true);
+  emptyOption.text = '';
+  document.getElementById('customerId').append(emptyOption);
+  customers.forEach(c=>{
+    const op = new Option(c.text, c.id, false, false);
+    op.setAttribute('data-phone', c.phone || '');
+    op.setAttribute('data-tax', c.tax || '');
+    op.setAttribute('data-code', c.code || '');
+    document.getElementById('customerId').append(op);
+  });
+
+  $('#customerId').val('').trigger('change');
+  $('#customerId').select2({ width:'100%', placeholder:'-- Chọn khách hàng --', allowClear:true, matcher: function(params, data){ if($.trim(params.term)==='') return data; const term=(params.term||'').toLowerCase(); const txt=(data.text||'').toLowerCase(); const phone=(data.element?.dataset?.phone||'').toLowerCase(); const tax=(data.element?.dataset?.tax||'').toLowerCase(); const code=(data.element?.dataset?.code||'').toLowerCase(); return (txt.includes(term)||phone.includes(term)||tax.includes(term)||code.includes(term)) ? data : null; } });
+  $('#customerId').on('select2:opening', function(e){ e.preventDefault(); renderCustomerTable(document.getElementById('customerTableSearch').value || ''); bootstrap.Modal.getOrCreateInstance(document.getElementById('customerPickerModal')).show(); });
+  $('#customerId').on('change', function(){
+    this.classList.remove('is-invalid');
+    document.getElementById('errCustomer').classList.add('d-none');
+  });
+  $('#customerTableSearch').on('input', function(){ renderCustomerTable(this.value || ''); });
+  $('#customerPickerBody').on('click', 'tr[data-id]', function(){
+    const id = $(this).data('id');
+    if(!id) return;
+    $('#customerId').val(String(id)).trigger('change');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('customerPickerModal')).hide();
+  });
+  $('.js-select2').select2({ width:'100%' });
+  $('.js-select2-modal').select2({ width:'100%', dropdownParent: $('#quickCustomerModal') });
+  $('#qcSourceId, #qcTypeId').on('change', function(){
+    this.classList.remove('is-invalid');
+    const wrap = $(this).next('.select2');
+    wrap.removeClass('is-invalid');
+    wrap.find('.select2-selection').removeClass('is-invalid');
+    if (this.id === 'qcSourceId') {
+      const e = document.getElementById('qcSourceErr'); if (e) e.classList.add('d-none');
+    }
+    if (this.id === 'qcTypeId') {
+      const e = document.getElementById('qcTypeErr'); if (e) e.classList.add('d-none');
+    }
+  });
+  $('#qcName').on('input', function(){ this.classList.remove('is-invalid'); const e=document.getElementById('qcNameErr'); if(e) e.classList.add('d-none'); });
+  $('#qcPhone').on('input', function(){ this.classList.remove('is-invalid'); const e=document.getElementById('qcPhoneErr'); if(e) e.classList.add('d-none'); });
+
+  // Mặc định quốc gia là Vietnam cho popup thêm nhanh khách hàng
+  const qcCountryEl = document.getElementById('qcCountryId');
+  if (qcCountryEl) {
+    const viOption = Array.from(qcCountryEl.options).find(o =>
+      (o.text || '').toLowerCase().includes('vietnam') || (o.text || '').toLowerCase().includes('việt nam')
+    );
+    if (viOption) {
+      qcCountryEl.value = viOption.value;
+      $('#qcCountryId').trigger('change');
+    }
+  }
+
+  document.getElementById('btnOpenQuickCustomer').addEventListener('click', ()=> bootstrap.Modal.getOrCreateInstance(document.getElementById('quickCustomerModal')).show());
+  document.getElementById('btnQuickCreateCustomer').addEventListener('click', quickCreateCustomer);
+  function openAddressPicker(){
+    const html = currentAddresses.map(a=>`<tr><td>${a.text||''}</td><td>${a.contactName||''}</td><td>${a.contactPhone||''}</td><td><button type="button" class="btn btn-sm btn-outline-primary js-pick-address" data-id="${a.id}">Chọn</button></td></tr>`).join('');
+    addressPickerBody.innerHTML = html || '<tr><td colspan="4" class="text-center text-muted">Khách hàng chưa có địa chỉ đã lưu.</td></tr>';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addressPickerModal')).show();
+  }
+  if (btnOpenAddressPickerInline) btnOpenAddressPickerInline.addEventListener('click', openAddressPicker);
+  addressPickerBody.addEventListener('click', async function(e){
+    const btn=e.target.closest('.js-pick-address'); if(!btn) return;
+    const item=currentAddresses.find(x=>String(x.id)===String(btn.dataset.id)); if(!item) return;
+    serviceAddressId.value=item.id||'';
+    serviceAddressText.value=item.addressLine || item.text || '';
+    if(item.provinceId){
+      $('#provinceId').val(String(item.provinceId)).trigger('change');
+      await loadWards();
+    }
+    if(item.wardId){
+      $('#wardId').val(String(item.wardId)).trigger('change');
+    }
+    if(item.contactName) contactName.value=item.contactName;
+    if(item.contactPhone) contactPhone.value=item.contactPhone;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('addressPickerModal')).hide();
+  });
+
+  customerSelect.addEventListener('change', function(){ loadCustomerAddresses(this.value); });
+  if (hasVatInvoice) {
+    hasVatInvoice.addEventListener('change', function(){
+      const disabled = !this.checked;
+      [invCompany, invTaxCode, invAddress, invEmail, invReceiver, btnLoadOldInvoiceInfo].forEach(el => { if (el) el.disabled = disabled; });
+      if(disabled){
+        [invCompany, invTaxCode, invAddress, invEmail, invReceiver].forEach(x => x.classList.remove('is-invalid'));
+        [errInvCompany, errInvTaxCode, errInvAddress, errInvEmail, errInvReceiver].forEach(x => x?.classList.add('d-none'));
+      }
+    });
+  }
+  if (btnLoadOldInvoiceInfo) {
+    btnLoadOldInvoiceInfo.addEventListener('click', fillInvoiceFromCustomer);
+  }
+  [invCompany, invTaxCode, invAddress, invEmail, invReceiver].forEach((el) => {
+    el?.addEventListener('input', function(){
+      this.classList.remove('is-invalid');
+      const errMap = {
+        invCompany: errInvCompany,
+        invTaxCode: errInvTaxCode,
+        invAddress: errInvAddress,
+        invEmail: errInvEmail,
+        invReceiver: errInvReceiver
+      };
+      const err = errMap[this.id];
+      if (err) err.classList.add('d-none');
+    });
+  });
+  provinceId.addEventListener('change', loadWards);
+  document.getElementById('quoteDate')?.addEventListener('input', function(){
+    this.classList.remove('is-invalid');
+    document.getElementById('errQuoteDate').classList.add('d-none');
+  });
+  serviceAddressText?.addEventListener('input', function(){
+    this.classList.remove('is-invalid');
+    document.getElementById('errServiceAddress').classList.add('d-none');
+  });
+
+  document.getElementById('btnAddRow').addEventListener('click', createRow);
+  quoteDiscountDisplay.addEventListener('input', recalcAll); quoteDiscountDisplay.addEventListener('blur', recalcAll);
+  if (quoteVatRate) { quoteVatRate.addEventListener('input', recalcAll); quoteVatRate.addEventListener('blur', recalcAll); }
+  form.addEventListener('submit', function(e){
+    let valid = true;
+    document.getElementById('errCustomer').classList.add('d-none');
+    document.getElementById('errQuoteDate').classList.add('d-none');
+    document.getElementById('errServiceAddress').classList.add('d-none');
+    customerSelect.classList.remove('is-invalid');
+    document.getElementById('quoteDate').classList.remove('is-invalid');
+    serviceAddressText.classList.remove('is-invalid');
+    [invCompany, invTaxCode, invAddress, invEmail, invReceiver].forEach(x => x.classList.remove('is-invalid'));
+    [errInvCompany, errInvTaxCode, errInvAddress, errInvEmail, errInvReceiver].forEach(x => x?.classList.add('d-none'));
+
+    if(!customerSelect.value){
+      document.getElementById('errCustomer').classList.remove('d-none');
+      customerSelect.classList.add('is-invalid');
+      valid = false;
+    }
+    if(!document.getElementById('quoteDate').value){
+      document.getElementById('errQuoteDate').classList.remove('d-none');
+      document.getElementById('quoteDate').classList.add('is-invalid');
+      valid = false;
+    }
+    if(!serviceAddressText.value.trim()){
+      document.getElementById('errServiceAddress').classList.remove('d-none');
+      serviceAddressText.classList.add('is-invalid');
+      valid = false;
+    }
+    if(hasVatInvoice && hasVatInvoice.checked){
+      if(!invCompany.value.trim()){ invCompany.classList.add('is-invalid'); errInvCompany?.classList.remove('d-none'); valid = false; }
+      if(!invTaxCode.value.trim()){ invTaxCode.classList.add('is-invalid'); errInvTaxCode?.classList.remove('d-none'); valid = false; }
+      if(!invAddress.value.trim()){ invAddress.classList.add('is-invalid'); errInvAddress?.classList.remove('d-none'); valid = false; }
+      if(!invEmail.value.trim()){ invEmail.classList.add('is-invalid'); errInvEmail?.classList.remove('d-none'); valid = false; }
+      if(!invReceiver.value.trim()){ invReceiver.classList.add('is-invalid'); errInvReceiver?.classList.remove('d-none'); valid = false; }
+    }
+    if(!valid){
+      e.preventDefault();
+      return false;
+    }
+    recalcAll();
+    return true;
+  });
+  createRow();
+  loadWards();
+  if (hasVatInvoice) hasVatInvoice.dispatchEvent(new Event('change'));
+  if(customerSelect.value){ loadCustomerAddresses(customerSelect.value); }
+})();
+</script>
+}

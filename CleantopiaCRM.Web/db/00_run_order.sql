@@ -15,4 +15,9 @@
 -- 8) 07_customer_master_upgrade.sql (nguon khach, loai khach, nhieu dia chi dich vu, hoa don doanh nghiep)
 -- 9) 08_service_price_policy_upgrade.sql (tach don vi + chu ky tai cham soc cho bang gia dich vu)
 -- 10) 09_service_categories_parent_child.sql (quan ly danh muc dich vu cha/con thuần)
+-- 11) 10_quote_discount_upgrade.sql (bo sung giam gia bao gia + giam gia/ghi chu tung dong)
+-- 12) 11_quote_address_upgrade.sql (bo sung dia chi va nguoi lien he cho bao gia)
+-- 13) 12_customer_code_upgrade.sql (bo sung ma khach hang CustomerCode)
+-- 14) 13_quote_vat_rate_upgrade.sql (bo sung VAT cho bao gia)
+-- 15) 14_quote_full_info_upgrade.sql (bo sung thong tin dia chi, hoa don, tong tien cho bao gia)
 
